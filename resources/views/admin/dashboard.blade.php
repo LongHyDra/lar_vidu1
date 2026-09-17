@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Bảng Điều Khiển | PHỤ KIỆN XE MÁY</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background: #f0f4f8;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 248px;
+            height: 100vh;
+            position: fixed;
+            top: 0; left: 0;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            box-shadow: 6px 0 24px rgba(15,23,42,0.06);
+            overflow-y: auto;
+        }
+        .sidebar-brand {
+            padding: 18px 16px 16px; border-bottom: 1px solid #f1f5f9;
+            display: flex; align-items: center; gap: 11px;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        }
+        .brand-icon-wrap { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
+        .brand-icon-glow { position: absolute; inset: -2px; background: linear-gradient(135deg, #2563eb, #f59e0b); border-radius: 12px; filter: blur(4px); opacity: 0.7; }
+        .brand-icon-inner { position: relative; width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid rgba(255,255,255,0.2); border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #60a5fa; font-size: 1.15rem; box-shadow: 0 4px 10px rgba(15,23,42,0.3); }
+        .sidebar-brand .brand-text { font-size: 0.95rem; font-weight: 900; color: #0f172a; line-height: 1.1; display: flex; align-items: center; gap: 5px; }
+        .sidebar-brand .brand-sub  { font-size: 0.7rem; color: #64748b; font-weight: 600; margin-top: 2px; }
+        .badge-247-sm { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 0.65rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; }
+
+        .sidebar-nav { padding: 14px 10px 10px; }
+        .nav-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            padding: 14px 10px 7px;
+        }
+        .nav-item-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 44px;
+            padding: 7px 10px;
+            border-radius: 9px;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.18s;
+            margin-bottom: 3px;
+        }
+        .nav-item-link:hover { background: #f1f5f9; color: #1e293b; }
+        .nav-item-link.active {
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+            box-shadow: inset 3px 0 #2563eb;
+        }
+        .nav-item-link .nav-icon {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem;
+            background: #f1f5f9;
+            transition: all 0.18s;
+        }
+        .nav-item-link.active .nav-icon { background: #dbeafe; color: #2563eb; }
+        .sidebar-footer { margin: 8px 10px 14px; padding: 11px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
+        .sidebar-user { display: flex; align-items: center; gap: 9px; min-width: 0; }
+        .sidebar-avatar { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; background: #dbeafe; color: #2563eb; font-weight: 800; font-size: .8rem; }
+        .sidebar-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .76rem; font-weight: 700; color: #1e293b; }
+        .sidebar-user-role { color: #94a3b8; font-size: .67rem; }
+        .sidebar-logout { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 8px; color: #ef4444; background: #fee2e2; }
+        .sidebar-toggle { display: none; border: 0; background: #fff; color: #1e293b; width: 38px; height: 38px; border-radius: 9px; box-shadow: 0 2px 8px rgba(15,23,42,.08); }
+        .sidebar-backdrop { display: none; }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            margin-left: 248px;
+            padding: 28px 32px;
+            min-height: 100vh;
+        }
+        @media (max-width: 900px) {
+            .sidebar { width: 228px; }
+            .main-content { margin-left: 228px; padding: 22px; }
+        }
+        @media (max-width: 700px) {
+            .sidebar { transform: translateX(-105%); transition: transform .22s ease; }
+            .sidebar.is-open { transform: translateX(0); }
+            .sidebar-toggle { display: inline-grid; place-items: center; }
+            .sidebar-backdrop { position: fixed; inset: 0; z-index: 99; background: rgba(15,23,42,.38); backdrop-filter: blur(2px); }
+            .sidebar-backdrop.is-visible { display: block; }
+            .main-content { margin-left: 0; padding: 14px; }
+            .topbar { padding: 11px 14px; }
+            .topbar-title { font-size: .88rem; }
+            .topbar-breadcrumb { display: none; }
+        }
+
+        /* ===== TOP BAR ===== */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 14px 22px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 24px;
+            border: 1px solid #f1f5f9;
+        }
+        .topbar-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .topbar-breadcrumb {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 1px;
+        }
+
+        /* ===== WELCOME CARD ===== */
+        .welcome-card {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border-radius: 16px;
+            padding: 28px;
+            color: #fff;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(15,23,42,0.15);
+        }
+        .welcome-card h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .welcome-card p {
+            font-size: 0.88rem;
+            color: #94a3b8;
+            margin: 0;
+            max-width: 600px;
+        }
+        .welcome-card .bg-icon {
+            position: absolute;
+            right: 20px;
+            bottom: -15px;
+            font-size: 7rem;
+            color: rgba(255,255,255,0.05);
+            pointer-events: none;
+        }
+
+        /* ===== STATS CARDS ===== */
+        .stats-row { margin-bottom: 24px; }
+        .stat-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 20px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .stat-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+        .stat-icon {
+            width: 52px; height: 52px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+        .stat-icon.blue { background: #eff6ff; color: #2563eb; }
+        .stat-icon.green { background: #f0fdf4; color: #16a34a; }
+        .stat-icon.orange { background: #fff7ed; color: #ea580c; }
+        .stat-icon.purple { background: #faf5ff; color: #9333ea; }
+        .stat-value { font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1; }
+        .stat-label { font-size: 0.8rem; color: #64748b; margin-top: 4px; font-weight: 500; }
+        .report-panel { background: #fff; border-radius: 16px; border: 1px solid #f1f5f9; box-shadow: 0 2px 12px rgba(0,0,0,0.04); padding: 24px; height: 100%; }
+        .report-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+        .report-heading h3 { font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; }
+        .report-heading p { color: #64748b; font-size: 0.78rem; margin: 4px 0 0; }
+        .metric-number { font-size: 1.35rem; font-weight: 800; color: #0f172a; }
+        .metric-caption { color: #64748b; font-size: 0.78rem; }
+        .revenue-bars { display: flex; align-items: end; gap: 6px; min-height: 170px; border-bottom: 1px solid #e2e8f0; padding: 12px 4px 0; }
+        .revenue-bar-wrap { flex: 1; min-width: 10px; height: 150px; display: flex; align-items: end; justify-content: center; position: relative; }
+        .revenue-bar { width: 100%; max-width: 24px; min-height: 3px; background: linear-gradient(180deg, #2563eb, #60a5fa); border-radius: 5px 5px 0 0; }
+        .revenue-bar-label { position: absolute; bottom: -23px; font-size: 0.62rem; color: #64748b; white-space: nowrap; }
+        .report-table th { color: #64748b; font-size: 0.72rem; text-transform: uppercase; }
+        .report-table td { color: #334155; font-size: 0.84rem; }
+        .order-status-filters { display: flex; flex-wrap: wrap; }
+        .order-status-chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #475569; text-decoration: none; font-size: 0.78rem; font-weight: 700; transition: all .15s ease; }
+        .order-status-chip span { min-width: 21px; padding: 2px 6px; border-radius: 999px; background: #e2e8f0; color: #334155; text-align: center; font-size: .7rem; }
+        .order-status-chip:hover, .order-status-chip.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+        .order-status-chip.active span, .order-status-chip:hover span { background: rgba(255,255,255,.22); color: #fff; }
+        .order-status-chip.status-cancelled.active, .order-status-chip.status-cancelled:hover { background: #dc2626; border-color: #dc2626; }
+        .order-status-chip.status-delivered.active, .order-status-chip.status-delivered:hover { background: #16a34a; border-color: #16a34a; }
+
+        /* ===== QUICK ACTIONS PANEL ===== */
+        .card-panel {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-panel-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+        .action-card-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.88rem;
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #334155;
+        }
+        .action-card-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            background: #fff;
+            color: #2563eb;
+            border-color: #bfdbfe;
+        }
+        .action-card-btn .icon-box {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+        }
+        .icon-blue { background: #eff6ff; color: #2563eb; }
+        .icon-green { background: #f0fdf4; color: #16a34a; }
+        .icon-orange { background: #fff7ed; color: #ea580c; }
+        .icon-purple { background: #faf5ff; color: #9333ea; }
+    </style>
+</head>
+<body>
+@php
+    $orderStatusLabels = [
+        'pending' => 'Chờ xác nhận',
+        'confirmed' => 'Đã xác nhận',
+        'packaging' => 'Đang đóng gói',
+        'shipping' => 'Đang vận chuyển',
+        'delivered' => 'Đã giao',
+        'cancelled' => 'Đã hủy',
+        'cod_ordered' => 'Đã tạo vận đơn',
+    ];
+@endphp
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon-wrap">
+            <div class="brand-icon-glow"></div>
+            <div class="brand-icon-inner"><i class="fa-solid fa-motorcycle"></i></div>
+        </div>
+        <div>
+            <div class="brand-text">PHỤ KIỆN XE MÁY <span class="badge-247-sm">247</span></div>
+            <div class="brand-sub">Hệ thống đồ chơi chính hãng</div>
+        </div>
+    </div>
+
+    <div class="sidebar-nav">
+        <div class="nav-label"><i class="fa-solid fa-store me-1"></i> Cửa hàng</div>
+        <a href="{{ route('welcome') }}" class="nav-item-link">
+            <div class="nav-icon"><i class="fa-solid fa-house"></i></div>
+            Trang chủ
+        </a>
+        <a href="{{ route('cart.index') }}" class="nav-item-link">
+            <div class="nav-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+            Giỏ hàng
+        </a>
+        <a href="{{ route('categories.index') }}" class="nav-item-link">
+            <div class="nav-icon"><i class="fa-solid fa-tags"></i></div>
+            Danh Mục Phụ Kiện
+        </a>
+        <a href="{{ route('products.index') }}" class="nav-item-link">
+            <div class="nav-icon"><i class="fa-solid fa-box"></i></div>
+            Sản Phẩm Phụ Kiện
+        </a>
+        
+        @auth
+            @if(Auth::user()->isAdmin())
+                <div class="nav-label" style="margin-top: 16px;"><i class="fa-solid fa-shield-halved me-1"></i> Quản trị</div>
+                <a href="{{ route('admin.dashboard', ['section' => 'overview']) }}" class="nav-item-link {{ $section === 'overview' ? 'active' : '' }}">
+                    <div class="nav-icon"><i class="fa-solid fa-chart-line"></i></div>
+                    Bảng Điều Khiển
+                </a>
+                <a href="{{ route('admin.dashboard', ['section' => 'orders']) }}" class="nav-item-link {{ $section === 'orders' ? 'active' : '' }}">
+                    <div class="nav-icon"><i class="fa-solid fa-receipt"></i></div>
+                    Đơn hàng
+                </a>
+                <a href="{{ route('admin.dashboard', ['section' => 'financial']) }}#financial-report" class="nav-item-link {{ $section === 'financial' ? 'active' : '' }}">
+                    <div class="nav-icon"><i class="fa-solid fa-chart-pie"></i></div>
+                    Thống kê tài chính
+                </a>
+                <a href="{{ route('admin.dashboard', ['section' => 'financial']) }}#financial-report" class="nav-item-link {{ $section === 'financial' ? 'active' : '' }}">
+                    <div class="nav-icon"><i class="fa-solid fa-file-lines"></i></div>
+                    Báo cáo
+                </a>
+                <a href="{{ route('admin.dashboard', ['section' => 'payments']) }}" class="nav-item-link {{ $section === 'payments' ? 'active' : '' }}">
+                    <div class="nav-icon"><i class="fa-solid fa-money-check-dollar"></i></div>
+                    Giao dịch thanh toán
+                </a>
+                <a href="{{ route('admin.dashboard', ['section' => 'users']) }}" class="nav-item-link {{ $section === 'users' ? 'active' : '' }}">
+                    <div class="nav-icon"><i class="fa-solid fa-users"></i></div>
+                    Người dùng
+                </a>
+            @endif
+        @endauth
+    </div>
+    @auth
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</div>
+                <div class="flex-grow-1 min-w-0"><div class="sidebar-user-name">{{ Auth::user()->name }}</div><div class="sidebar-user-role">Quản trị viên</div></div>
+                <form action="{{ route('logout') }}" method="POST">
+                    @csrf
+                    <button class="sidebar-logout" type="submit" title="Đăng xuất" aria-label="Đăng xuất"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+                </form>
+            </div>
+        </div>
+    @endauth
+</div>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div>
+            <div class="d-flex align-items-center gap-2"><button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Mở menu"><i class="fa-solid fa-bars"></i></button><div class="topbar-title">Hệ Thống Quản Lý Phụ Kiện Xe Máy</div></div>
+            <div class="topbar-breadcrumb">Trang chủ &rsaquo; Bảng điều khiển Admin</div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div style="font-size:0.8rem;color:#64748b;"><i class="fa-regular fa-clock me-1"></i>{{ now()->format('d/m/Y') }}</div>
+            
+            @auth
+                <div style="border-left: 1px solid #e2e8f0; padding-left: 15px; display: flex; align-items: center; gap: 12px;">
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">{{ Auth::user()->name }}</div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">Quản trị viên</div>
+                    </div>
+                    <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+                        @csrf
+                        <button type="submit" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                            <i class="fa-solid fa-sign-out me-1"></i>Đăng Xuất
+                        </button>
+                    </form>
+                </div>
+            @endauth
+        </div>
+    </div>
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-circle-exclamation me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+        </div>
+    @endif
+
+    <!-- Welcome Card -->
+    <div class="welcome-card" data-dashboard-section="overview">
+        <i class="fa-solid fa-motorcycle bg-icon"></i>
+        <h2>Xin chào Quản Trị Viên! 👋</h2>
+        <p>Chào mừng bạn đến với Hệ thống Quản lý Phụ Kiện Xe Máy. Theo dõi nhanh các chỉ số kho hàng và thực hiện các thao tác quản lý danh mục, sản phẩm bên dưới.</p>
+    </div>
+
+    <!-- Statistics Row -->
+    <div class="row stats-row g-3" data-dashboard-section="overview">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="fa-solid fa-box"></i></div>
+                <div>
+                    <div class="stat-value">{{ $totalProducts }}</div>
+                    <div class="stat-label">Tổng sản phẩm</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fa-solid fa-tags"></i></div>
+                <div>
+                    <div class="stat-value">{{ $totalCategories }}</div>
+                    <div class="stat-label">Tổng danh mục</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div>
+                    <div class="stat-value">{{ $lowStockProducts }}</div>
+                    <div class="stat-label">Sắp hết hàng (&le;5)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon purple"><i class="fa-solid fa-wallet"></i></div>
+                <div>
+                    <div class="stat-value" style="font-size: 1.15rem;">{{ number_format($totalValue ?? 0, 0, ',', '.') }}₫</div>
+                    <div class="stat-label">Tổng giá trị kho</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Report -->
+    <div class="row g-3 mb-4" id="financial-report">
+        <div class="col-md-3">
+            <div class="stat-card h-100">
+                <div class="stat-icon green"><i class="fa-solid fa-sack-dollar"></i></div>
+                <div><div class="stat-value" style="font-size:1.15rem;">{{ number_format($totalRevenue, 0, ',', '.') }}₫</div><div class="stat-label">Tổng doanh thu</div></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card h-100">
+                <div class="stat-icon blue"><i class="fa-solid fa-calendar-day"></i></div>
+                <div><div class="stat-value" style="font-size:1.15rem;">{{ number_format($todayRevenue, 0, ',', '.') }}₫</div><div class="stat-label">Doanh thu hôm nay</div></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card h-100">
+                <div class="stat-icon purple"><i class="fa-solid fa-calendar-days"></i></div>
+                <div><div class="stat-value" style="font-size:1.15rem;">{{ number_format($monthRevenue, 0, ',', '.') }}₫</div><div class="stat-label">Doanh thu tháng này</div></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card h-100">
+                <div class="stat-icon orange"><i class="fa-solid fa-chart-simple"></i></div>
+                <div><div class="stat-value">{{ number_format($totalSoldQty) }}</div><div class="stat-label">Số lượng đã bán</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4" data-dashboard-section="financial">
+        <div class="col-lg-8">
+            <div class="report-panel">
+                <div class="report-heading">
+                    <div><h3>Doanh thu theo ngày</h3><p>Biểu đồ trong {{ $period }} ngày gần nhất, không tính đơn đã hủy.</p></div>
+                    <form method="GET" action="{{ route('admin.dashboard') }}" class="d-flex flex-wrap gap-1 justify-content-end">
+                        <select name="period" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Kỳ báo cáo">
+                            @foreach([7 => '7 ngày', 30 => '30 ngày', 90 => '90 ngày', 365 => '1 năm'] as $value => $label)<option value="{{ $value }}" {{ $period === $value ? 'selected' : '' }}>{{ $label }}</option>@endforeach
+                        </select>
+                        <input type="date" name="from" value="{{ $fromDate }}" class="form-control form-control-sm" aria-label="Từ ngày">
+                        <input type="date" name="to" value="{{ $toDate }}" class="form-control form-control-sm" aria-label="Đến ngày">
+                        <button class="btn btn-sm btn-primary" type="submit">Lọc</button>
+                        <a class="btn btn-sm btn-outline-success" href="{{ route('admin.reports.revenue.csv', ['from' => $fromDate, 'to' => $toDate]) }}"><i class="fa-solid fa-file-csv"></i></a>
+                        <a class="btn btn-sm btn-outline-dark" target="_blank" href="{{ route('admin.reports.revenue.print', ['from' => $fromDate, 'to' => $toDate]) }}"><i class="fa-solid fa-file-pdf"></i></a>
+                    </form>
+                </div>
+                @php $maxDailyRevenue = max((float) ($dailyRevenue->max('total_revenue') ?? 0), 1); @endphp
+                <div class="revenue-bars">
+                    @forelse($dailyRevenue as $revenue)
+                        <div class="revenue-bar-wrap" title="{{ $revenue->date }}: {{ number_format($revenue->total_revenue, 0, ',', '.') }}đ">
+                            <div class="revenue-bar" style="height: {{ max(3, ($revenue->total_revenue / $maxDailyRevenue) * 145) }}px"></div>
+                            <span class="revenue-bar-label">{{ date('d/m', strtotime($revenue->date)) }}</span>
+                        </div>
+                    @empty
+                        <div class="w-100 text-center text-muted small">Chưa có dữ liệu doanh thu trong kỳ này.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="report-panel">
+                <div class="report-heading"><div><h3>Tổng quan đơn hàng</h3><p>Trạng thái hiện tại</p></div><i class="fa-solid fa-receipt text-primary"></i></div>
+                <div class="d-flex justify-content-between border-bottom py-2"><span class="metric-caption">Tổng đơn hàng</span><strong>{{ number_format($totalOrders) }}</strong></div>
+                <div class="d-flex justify-content-between border-bottom py-2"><span class="metric-caption">Đơn đã hủy</span><strong class="text-danger">{{ number_format($cancelledOrders) }}</strong></div>
+                <div class="d-flex justify-content-between py-2"><span class="metric-caption">Đơn hợp lệ</span><strong class="text-success">{{ number_format($totalOrders - $cancelledOrders) }}</strong></div>
+                <a href="{{ route('admin.dashboard', ['section' => 'orders']) }}" class="btn btn-outline-primary btn-sm w-100 mt-3"><i class="fa-solid fa-list me-1"></i>Xem đơn hàng</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4" data-dashboard-section="financial">
+        <div class="col-lg-7">
+            <div class="report-panel">
+                <div class="report-heading"><div><h3>Sản phẩm bán chạy</h3><p>Top 5 theo số lượng đã bán</p></div><i class="fa-solid fa-ranking-star text-warning"></i></div>
+                <div class="table-responsive"><table class="table report-table align-middle mb-0"><thead><tr><th>#</th><th>Sản phẩm</th><th class="text-end">Đã bán</th></tr></thead><tbody>
+                    @forelse($topProducts as $index => $product)
+                        <tr><td>{{ $index + 1 }}</td><td>{{ $product->name }}</td><td class="text-end fw-bold">{{ number_format($product->total_qty) }}</td></tr>
+                    @empty <tr><td colspan="3" class="text-center text-muted">Chưa có dữ liệu bán hàng.</td></tr> @endforelse
+                </tbody></table></div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="report-panel">
+                <div class="report-heading"><div><h3>Doanh thu theo tháng</h3><p>12 tháng gần nhất</p></div><i class="fa-solid fa-chart-column text-success"></i></div>
+                <div class="table-responsive"><table class="table report-table align-middle mb-0"><thead><tr><th>Tháng</th><th class="text-end">Doanh thu</th></tr></thead><tbody>
+                    @forelse($monthlyRevenue as $revenue)
+                        <tr><td>{{ date('m/Y', strtotime($revenue->month . '-01')) }}</td><td class="text-end fw-bold">{{ number_format($revenue->total_revenue, 0, ',', '.') }}₫</td></tr>
+                    @empty <tr><td colspan="2" class="text-center text-muted">Chưa có dữ liệu.</td></tr> @endforelse
+                </tbody></table></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Panel -->
+    <div class="card-panel" data-dashboard-section="overview">
+        <div class="card-panel-title">
+            <i class="fa-solid fa-bolt" style="color:#f59e0b;"></i>
+            Thao Tác Nhanh Hệ Thống
+        </div>
+        <div class="action-grid">
+            <a href="{{ route('categories.create') }}" class="action-card-btn">
+                <div class="icon-box icon-blue"><i class="fa-solid fa-folder-plus"></i></div>
+                Thêm danh mục mới
+            </a>
+            <a href="{{ route('products.create') }}" class="action-card-btn">
+                <div class="icon-box icon-green"><i class="fa-solid fa-cart-plus"></i></div>
+                Thêm sản phẩm mới
+            </a>
+            <a href="{{ route('categories.index') }}" class="action-card-btn">
+                <div class="icon-box icon-purple"><i class="fa-solid fa-list"></i></div>
+                Xem danh sách danh mục
+            </a>
+            <a href="{{ route('products.index') }}" class="action-card-btn">
+                <div class="icon-box icon-orange"><i class="fa-solid fa-boxes-stacked"></i></div>
+                Xem danh sách sản phẩm
+            </a>
+            <a href="{{ route('admin.dashboard', ['section' => 'orders']) }}" class="action-card-btn">
+                <div class="icon-box icon-blue"><i class="fa-solid fa-receipt"></i></div>
+                Quản lý đơn hàng
+            </a>
+            <a href="{{ route('admin.inventory.index') }}" class="action-card-btn">
+                <div class="icon-box icon-orange"><i class="fa-solid fa-warehouse"></i></div>
+                Nhật ký tồn kho
+            </a>
+        </div>
+    </div>
+
+    <div class="card-panel" data-dashboard-section="orders">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <div class="card-panel-title mb-0 me-2"><i class="fa-solid fa-receipt text-primary"></i></div>
+            <div class="order-status-filters d-flex flex-wrap gap-2">
+                <a href="{{ route('admin.dashboard', ['section' => 'orders']) }}" class="order-status-chip {{ !$orderStatus ? 'active' : '' }}">
+                    Tất cả <span>{{ $orderStatusCounts->sum() }}</span>
+                </a>
+                @foreach($orderStatusLabels as $status => $label)
+                    @if($status !== 'cod_ordered')
+                        <a href="{{ route('admin.dashboard', ['section' => 'orders', 'order_status' => $status]) }}" class="order-status-chip status-{{ $status }} {{ $orderStatus === $status ? 'active' : '' }}">
+                            {{ $label }} <span>{{ $orderStatusCounts[$status] ?? 0 }}</span>
+                        </a>
+                    @endif
+                @endforeach
+            </div>
+        </div>
+        <div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Ngày đặt</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+            @forelse($recentOrders as $order)
+                <tr>
+                    <td class="fw-bold">#{{ $order->id }}</td>
+                    <td>{{ $order->user->name ?? $order->name }}</td>
+                    <td>{{ $order->created_at->format('d/m/Y H:i') }}</td>
+                    <td class="fw-bold text-primary">{{ number_format($order->total_price, 0, ',', '.') }}đ</td>
+                    <td>
+                        <span class="badge text-bg-{{ $order->status === 'cancelled' ? 'danger' : ($order->status === 'delivered' ? 'success' : 'warning') }}">
+                            {{ $orderStatusLabels[$order->status] ?? $order->status }}
+                        </span>
+                    </td>
+                    <td>
+                        @if($order->status === 'cancelled')
+                            <span class="text-muted small"><i class="fa-solid fa-lock me-1"></i>Đã khóa</span>
+                        @else
+                            <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST" class="d-flex gap-2">
+                                @csrf
+                                <select name="status" class="form-select form-select-sm">
+                                    @foreach($orderStatusLabels as $status => $label)
+                                        @if($status !== 'cod_ordered')
+                                            <option value="{{ $status }}" {{ $order->status === $status ? 'selected' : '' }}>{{ $label }}</option>
+                                        @endif
+                                    @endforeach
+                                </select>
+                                <button class="btn btn-sm btn-primary">Lưu</button>
+                            </form>
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr><td colspan="6" class="text-center text-muted py-5">Không có đơn hàng phù hợp.</td></tr>
+            @endforelse
+        </tbody></table></div>
+    </div>
+
+    <div class="card-panel" data-dashboard-section="users">
+        <div class="card-panel-title"><i class="fa-solid fa-users text-primary"></i> Quản lý người dùng</div>
+        <div class="row g-4">
+            <div class="col-lg-7"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Số đơn</th><th>Thao tác</th></tr></thead><tbody>
+                @forelse($users as $user)
+                    <tr>
+                        <td>{{ $user->name }}</td>
+                        <td>{{ $user->email }}</td>
+                        <td><span class="badge text-bg-{{ $user->role === 'admin' ? 'dark' : 'primary' }}">{{ $user->role }}</span></td>
+                        <td>{{ $user->orders_count }}</td>
+                        <td>
+                            <details>
+                                <summary class="btn btn-sm btn-outline-primary">Sửa</summary>
+                                <form action="{{ route('admin.users.update', $user) }}" method="POST" class="mt-2" style="min-width:220px">
+                                    @csrf
+                                    @method('PUT')
+                                    <input name="name" value="{{ $user->name }}" class="form-control form-control-sm mb-1" required>
+                                    <input name="email" type="email" value="{{ $user->email }}" class="form-control form-control-sm mb-1" required>
+                                    <select name="role" class="form-select form-select-sm mb-1">
+                                        @foreach(['customer' => 'Khách hàng', 'editor' => 'Biên tập viên', 'manager' => 'Quản lý', 'admin' => 'Admin'] as $role => $label)
+                                            <option value="{{ $role }}" {{ $user->role === $role ? 'selected' : '' }}>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                    <input name="password" type="password" placeholder="Mật khẩu mới (không bắt buộc)" class="form-control form-control-sm mb-1">
+                                    <input name="password_confirmation" type="password" placeholder="Nhập lại mật khẩu" class="form-control form-control-sm mb-1">
+                                    <button class="btn btn-sm btn-primary">Lưu sửa</button>
+                                </form>
+                            </details>
+                            <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa tài khoản này?')">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger" title="Xóa tài khoản"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="text-center text-muted">Chưa có tài khoản.</td></tr>
+                @endforelse
+            </tbody></table></div></div>
+            <div class="col-lg-5"><div class="border rounded-3 p-3"><h3 class="h6">Thêm tài khoản</h3><form action="{{ route('admin.users.store') }}" method="POST">@csrf
+                <input name="name" class="form-control form-control-sm mb-2" placeholder="Họ và tên" required>
+                <input name="email" type="email" class="form-control form-control-sm mb-2" placeholder="Email" required>
+                <input name="password" type="password" class="form-control form-control-sm mb-2" placeholder="Mật khẩu tối thiểu 8 ký tự" required>
+                <input name="password_confirmation" type="password" class="form-control form-control-sm mb-2" placeholder="Nhập lại mật khẩu" required>
+                <select name="role" class="form-select form-select-sm mb-2"><option value="customer">Khách hàng</option><option value="editor">Biên tập viên</option><option value="manager">Quản lý</option><option value="admin">Admin</option></select>
+                <button class="btn btn-primary btn-sm w-100"><i class="fa-solid fa-user-plus me-1"></i>Thêm tài khoản</button>
+            </form></div></div>
+        </div>
+    </div>
+
+    <div class="card-panel" data-dashboard-section="payments">
+        <div class="card-panel-title"><i class="fa-solid fa-money-check-dollar text-success"></i> Giao dịch thanh toán</div>
+        <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Mã giao dịch</th><th>Đơn hàng</th><th>Khách hàng</th><th>Cổng</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>
+            @forelse($transactions as $transaction)<tr><td>#{{ $transaction->id }}</td><td>#{{ $transaction->order_id }}</td><td>{{ $transaction->order->user->name ?? $transaction->order->name ?? 'N/A' }}</td><td class="text-uppercase">{{ $transaction->gateway }}</td><td>{{ number_format($transaction->amount, 0, ',', '.') }}đ</td><td>{{ $transaction->status }}</td></tr>@empty<tr><td colspan="6" class="text-center text-muted">Chưa có giao dịch.</td></tr>@endforelse
+        </tbody></table></div>
+    </div>
+
+</div>
+
+@auth
+    <div id="admin-chat-box" style="position:fixed; right:24px; bottom:24px; z-index:1050;">
+        <button id="chat-toggle" class="btn btn-dark shadow" type="button" style="border-radius:999px; padding:12px 18px; font-weight:700;">
+            <i class="fa-solid fa-comments me-2"></i> Chat Khách hàng
+        </button>
+        <div id="chat-popup" class="card shadow-lg" style="display:none; width:360px; position:absolute; right:0; bottom:66px; border-radius:14px; overflow:hidden;">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <strong>Hỗ trợ trực tuyến</strong>
+                <button id="chat-close" type="button" class="btn btn-sm btn-light">X</button>
+            </div>
+            <div id="user-list" class="border-bottom" style="background:#f8fafc; max-height:180px; overflow-y:auto;">
+                <div class="p-2 text-center text-muted"><small>Đang tải danh sách...</small></div>
+            </div>
+            <div id="chat-messages" style="height:260px; overflow-y:auto; padding:14px; background:#fff;">
+                <div class="text-center mt-5 text-muted">Chọn một khách hàng để xem tin nhắn</div>
+            </div>
+            <div class="card-footer bg-white">
+                <div class="input-group">
+                    <input type="text" id="chat-input" class="form-control form-control-sm" placeholder="Nhập câu trả lời..." autocomplete="off">
+                    <button id="send-btn" class="btn btn-success btn-sm" type="button">Gửi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endauth
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+        const closeSidebar = () => {
+            sidebar?.classList.remove('is-open');
+            sidebarBackdrop?.classList.remove('is-visible');
+        };
+
+        sidebarToggle?.addEventListener('click', function () {
+            sidebar?.classList.toggle('is-open');
+            sidebarBackdrop?.classList.toggle('is-visible');
+        });
+        sidebarBackdrop?.addEventListener('click', closeSidebar);
+        sidebar?.querySelectorAll('a').forEach(link => link.addEventListener('click', closeSidebar));
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const activeSection = @json($section);
+        document.querySelectorAll('[data-dashboard-section]').forEach(function (element) {
+            element.style.display = element.dataset.dashboardSection === activeSection ? '' : 'none';
+        });
+
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggleBtn = document.getElementById('chat-toggle');
+        const chatPopup = document.getElementById('chat-popup');
+        const closeBtn = document.getElementById('chat-close');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        const userList = document.getElementById('user-list');
+
+        if (!toggleBtn || !chatPopup) return;
+
+        let currentUserId = null;
+
+        const loadUsers = () => {
+            fetch('{{ route("admin.chat.users") }}')
+                .then(res => res.json())
+                .then(users => {
+                    if (!userList) return;
+
+                    if (!users.length) {
+                        userList.innerHTML = '<div class="p-2 text-muted text-center"><small>Chưa có hội thoại</small></div>';
+                        return;
+                    }
+
+                    let html = '';
+                    users.forEach(user => {
+                        const active = Number(currentUserId) === Number(user.id) ? 'active' : '';
+                        html += `
+                            <div class="user-item p-2 border-bottom ${active}" data-user-id="${user.id}" style="cursor:pointer; background:${active ? '#e0f2fe' : '#fff'};">
+                                <strong>${user.name}</strong>${user.unread_count ? `<span class="badge bg-danger ms-1">${user.unread_count}</span>` : ''}
+                            </div>
+                        `;
+                    });
+                    userList.innerHTML = html;
+
+                    userList.querySelectorAll('.user-item').forEach(item => {
+                        item.addEventListener('click', function () {
+                            currentUserId = Number(this.dataset.userId);
+                            userList.querySelectorAll('.user-item').forEach(el => el.style.background = '#fff');
+                            this.style.background = '#e0f2fe';
+                            loadMessages();
+                        });
+                    });
+                })
+                .catch(() => {
+                    userList.innerHTML = '<div class="p-2 text-muted text-center"><small>Không thể tải danh sách</small></div>';
+                });
+        };
+
+        const loadMessages = () => {
+            if (!currentUserId) {
+                chatMessages.innerHTML = '<div class="text-center mt-5 text-muted">Chọn một khách hàng để xem tin nhắn</div>';
+                return;
+            }
+
+            fetch(`/admin/chat/messages/${currentUserId}`)
+                .then(res => res.json())
+                .then(messages => {
+                    let html = '';
+                    messages.forEach(msg => {
+                        const isMine = Number(msg.sender_id) === Number('{{ Auth::id() }}');
+                        const senderName = isMine ? 'Bạn' : (msg.sender?.name || 'Khách hàng');
+                        const color = isMine ? 'rgb(37 99 235)' : '#111827';
+                        html += `<div class="mb-2" style="color:${color};"><strong>${senderName}:</strong> ${msg.content}</div>`;
+                    });
+                    chatMessages.innerHTML = html || '<div class="text-center mt-5 text-muted">Chưa có tin nhắn nào</div>';
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                })
+                .catch(() => {
+                    chatMessages.innerHTML = '<div class="text-center mt-5 text-danger">Không thể tải tin nhắn</div>';
+                });
+        };
+
+        const sendMessage = () => {
+            const message = chatInput.value.trim();
+            if (!message || !currentUserId) return;
+
+            fetch('{{ route("admin.chat.send") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ user_id: currentUserId, message })
+            })
+                .then(res => res.json())
+                .then(() => {
+                    chatInput.value = '';
+                    loadMessages();
+                })
+                .catch(() => {
+                    chatInput.value = '';
+                });
+        };
+
+        toggleBtn.addEventListener('click', () => {
+            chatPopup.style.display = chatPopup.style.display === 'none' ? 'block' : 'none';
+            if (chatPopup.style.display === 'block') {
+                loadUsers();
+            }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            chatPopup.style.display = 'none';
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        setInterval(() => {
+            if (chatPopup.style.display === 'block') {
+                loadUsers();
+                loadMessages();
+            }
+        }, 3000);
+    });
+</script>
+</body>
+</html>
