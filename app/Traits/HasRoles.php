@@ -2,69 +2,38 @@
 
 namespace App\Traits;
 
-use Illuminate\Support\Facades\Auth;
-
+/**
+ * @property string $role
+ */
 trait HasRoles
 {
-    /**
-     * Kiểm tra người dùng có role cụ thể không
-     *
-     * @param  string  $role
-     * @return bool
-     */
-    public function hasRole($role)
+    public function hasRole(string $role): bool
     {
-        return Auth::check() && Auth::user()->role === $role;
+        return ($this->role ?? null) === $role;
     }
 
-    /**
-     * Kiểm tra người dùng có một trong các role này không
-     *
-     * @param  array  $roles
-     * @return bool
-     */
-    public function hasAnyRole($roles)
+    public function hasAnyRole(array $roles): bool
     {
-        return Auth::check() && in_array(Auth::user()->role, $roles);
+        return in_array($this->role ?? null, $roles, true);
     }
 
-    /**
-     * Kiểm tra người dùng có phải admin không
-     *
-     * @return bool
-     */
-    public function isAdmin()
+    public function isAdmin(): bool
     {
-        return Auth::check() && Auth::user()->role === 'admin';
+        return $this->hasRole('admin');
     }
 
-    /**
-     * Kiểm tra người dùng có phải editor không
-     *
-     * @return bool
-     */
-    public function isEditor()
+    public function isEditor(): bool
     {
-        return Auth::check() && Auth::user()->role === 'editor';
+        return $this->hasRole('editor');
     }
 
-    /**
-     * Kiểm tra người dùng có phải manager không
-     *
-     * @return bool
-     */
-    public function isManager()
+    public function isManager(): bool
     {
-        return Auth::check() && Auth::user()->role === 'manager';
+        return $this->hasRole('manager');
     }
 
-    /**
-     * Kiểm tra người dùng có phải customer không
-     *
-     * @return bool
-     */
-    public function isCustomer()
+    public function isCustomer(): bool
     {
-        return Auth::check() && Auth::user()->role === 'customer';
+        return $this->hasRole('customer');
     }
 }

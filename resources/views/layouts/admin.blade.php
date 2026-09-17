@@ -1,213 +1,339 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Quản Lý Phụ Kiện Xe Máy')</title>
+    <title>@yield('title', 'Quản Trị Hệ Thống') | PHỤ KIỆN XE MÁY 247</title>
+
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <!-- Google Fonts (Inter) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f6f9; color: #333; }
-        .sidebar { width: 260px; height: 100vh; position: fixed; top: 0; left: 0; background: #1e293b; color: #fff; padding-top: 20px; z-index: 100; }
-        .sidebar .brand { font-size: 1.25rem; font-weight: 700; padding: 0 20px 20px 20px; border-bottom: 1px solid #334155; color: #38bdf8; }
-        .sidebar a { display: flex; align-items: center; padding: 12px 20px; color: #94a3b8; text-decoration: none; font-weight: 500; transition: all 0.2s; }
-        .sidebar a:hover, .sidebar a.active { background: #0f172a; color: #38bdf8; border-left: 4px solid #38bdf8; }
-        .sidebar a i { width: 25px; font-size: 1.1rem; }
-        .main-content { margin-left: 260px; padding: 30px; }
-        .top-navbar { background: #fff; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
-        .card-custom { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); background: #fff; }
-        .table-custom thead { background-color: #f8fafc; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; }
-        .table-custom td { vertical-align: middle; padding: 14px 16px; }
-        .badge-subtle { padding: 6px 12px; font-weight: 600; border-radius: 20px; }
-        .badge-subtle-success { background-color: #dcfce7; color: #15803d; }
-        .btn-action { width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.875rem; border: none; }
+        :root {
+            --sidebar-width: 255px;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-canvas: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-canvas) !important;
+            color: var(--text-main) !important;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        /* SIDEBAR STYLING */
+        .admin-sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: #0f172a;
+            /* Slate 900 */
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            z-index: 1050;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-brand {
+            padding: 20px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+        }
+
+        .brand-title {
+            font-size: 0.92rem;
+            font-weight: 800;
+            letter-spacing: -0.2px;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+
+        .brand-badge {
+            background: #f59e0b;
+            color: #000;
+            font-size: 0.62rem;
+            font-weight: 900;
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+
+        .sidebar-scroll {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 14px 10px;
+        }
+
+        .nav-category {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            padding: 12px 10px 6px;
+        }
+
+        .nav-link-custom {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.86rem;
+            margin-bottom: 3px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link-custom:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: #ffffff;
+        }
+
+        .nav-link-custom.active {
+            background: #2563eb;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .nav-link-custom .nav-icon {
+            width: 24px;
+            display: flex;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        /* SIDEBAR USER FOOTER */
+        .sidebar-user-footer {
+            padding: 12px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #3b82f6;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        /* MAIN CONTENT LAYOUT */
+        .admin-main {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* TOPBAR */
+        .admin-topbar {
+            height: 68px;
+            background: #ffffff !important;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .page-header-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .page-header-breadcrumb {
+            font-size: 0.76rem;
+            color: var(--text-sub);
+            margin-top: 2px;
+        }
+
+        .content-body {
+            padding: 28px 32px;
+            flex-grow: 1;
+        }
+
+        /* STANDARDIZED FORM CONTROLS (Chống Dark Mode của browser) */
+        .card-custom {
+            background-color: #ffffff !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+            color: var(--text-main) !important;
+        }
+
+        .form-control,
+        .form-select {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px;
+            padding: 9px 13px;
+            font-size: 0.88rem;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+        }
     </style>
+
+    @stack('styles')
 </head>
+
 <body>
 
-    <!-- Sidebar Điều Hướng -->
-    <div class="sidebar">
-        <div class="brand">
-            <i class="fa-solid fa-motorcycle me-2"></i> PHỤ KIỆN XE MÁY
-        </div>
-        <div class="mt-3">
-            <a href="{{ route('categories.index') }}" class="active"><i class="fa-solid fa-list me-2"></i> Danh Mục Phụ Kiện</a>
-            <a href="{{ route('products.index') }}"><i class="fa-solid fa-box me-2"></i> Sản Phẩm Phụ Kiện</a>
-            <a href="{{ route('admin.dashboard') }}"><i class="fa-solid fa-chart-pie me-2"></i> Bảng Điều Khiển</a>
-        </div>
-    </div>
-
-    <!-- Nội dung chính -->
-    <div class="main-content">
-        <!-- Top Navbar -->
-        <div class="top-navbar">
-            <h5 class="mb-0 fw-bold text-slate-800">Hệ Thống Quản Lý Phụ Kiện Xe Máy</h5>
-            <div class="d-flex align-items-center gap-3">
-                <span class="badge bg-primary-subtle text-primary fw-medium px-3 py-2">Phiên bản 1.0</span>
-                <img src="https://ui-avatars.com/api/?name=Admin+Phu+Kien&background=0D8ABC&color=fff" class="rounded-circle" width="38" alt="Avatar">
+    <!-- 1. SIDEBAR CỐ ĐỊNH -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon"><i class="fa-solid fa-motorcycle"></i></div>
+            <div>
+                <div class="brand-title">PHỤ KIỆN XE MÁY <span class="brand-badge">247</span></div>
+                <div style="font-size: 0.68rem; color: #94a3b8;">Hệ thống quản trị</div>
             </div>
         </div>
 
-        @yield('content')
-    </div>
+        <div class="sidebar-scroll">
+            <div class="nav-category">Bán Hàng & Kho</div>
+            <a href="{{ url('/admin/dashboard?section=overview') }}" class="nav-link-custom {{ request('section', 'overview') === 'overview' && request()->is('admin/dashboard') ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-chart-pie"></i></span> Tổng quan
+            </a>
+            <a href="{{ url('/admin/dashboard?section=orders') }}" class="nav-link-custom {{ request('section') === 'orders' ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-receipt"></i></span> Đơn hàng
+            </a>
+            <a href="{{ url('/admin/dashboard?section=financial') }}" class="nav-link-custom {{ request('section') === 'financial' ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span> Thống kê tài chính
+            </a>
+            <a href="{{ url('/admin/dashboard?section=inventory') }}" class="nav-link-custom {{ request('section') === 'inventory' ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-warehouse"></i></span> Nhật ký tồn kho
+            </a>
 
-    @auth
-        <div id="admin-chat-box" style="position:fixed; right:24px; bottom:24px; z-index:1050;">
-            <button id="chat-toggle" class="btn btn-dark shadow" type="button" style="border-radius:999px; padding:12px 18px; font-weight:700;">
-                <i class="fa-solid fa-comments me-2"></i> Chat Khách hàng
-            </button>
-            <div id="chat-popup" class="card shadow-lg" style="display:none; width:360px; position:absolute; right:0; bottom:66px; border-radius:14px; overflow:hidden;">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <strong>Hỗ trợ trực tuyến</strong>
-                    <button id="chat-close" type="button" class="btn btn-sm btn-light">X</button>
-                </div>
-                <div id="user-list" class="border-bottom" style="background:#f8fafc; max-height:180px; overflow-y:auto;">
-                    <div class="p-2 text-center text-muted"><small>Đang tải danh sách...</small></div>
-                </div>
-                <div id="chat-messages" style="height:260px; overflow-y:auto; padding:14px; background:#fff;">
-                    <div class="text-center mt-5 text-muted">Chọn một khách hàng để xem tin nhắn</div>
-                </div>
-                <div class="card-footer bg-white">
-                    <div class="input-group">
-                        <input type="text" id="chat-input" class="form-control form-control-sm" placeholder="Nhập câu trả lời..." autocomplete="off">
-                        <button id="send-btn" class="btn btn-success btn-sm" type="button">Gửi</button>
-                    </div>
+            <div class="nav-category">Danh Mục & Hàng Hóa</div>
+            <a href="{{ route('categories.index') }}" class="nav-link-custom {{ request()->is('categories*') ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-tags"></i></span> Danh mục phụ kiện
+            </a>
+            <a href="{{ route('products.index') }}" class="nav-link-custom {{ request()->is('products*') ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-box-open"></i></span> Sản phẩm phụ kiện
+            </a>
+
+            <div class="nav-category">Hệ Thống</div>
+            <a href="{{ url('/admin/dashboard?section=users') }}" class="nav-link-custom {{ request('section') === 'users' ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-users"></i></span> Người dùng
+            </a>
+            <a href="{{ url('/admin/dashboard?section=payments') }}" class="nav-link-custom {{ request('section') === 'payments' ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-money-check-dollar"></i></span> Giao dịch cổng MoMo
+            </a>
+            <a href="{{ route('welcome') }}" class="nav-link-custom" target="_blank">
+                <span class="nav-icon"><i class="fa-solid fa-arrow-up-right-from-square"></i></span> Xem cửa hàng
+            </a>
+        </div>
+
+        @auth
+        <div class="sidebar-user-footer">
+            <div class="d-flex align-items-center gap-2">
+                <div class="user-avatar">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</div>
+                <div style="line-height: 1.2;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: #fff;">{{ Auth::user()->name }}</div>
+                    <small style="font-size: 0.68rem; color: #94a3b8;">Quản trị viên</small>
                 </div>
             </div>
+            <form action="{{ route('logout') }}" method="POST" class="m-0">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1" title="Đăng xuất">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </button>
+            </form>
         </div>
-    @endauth
+        @endauth
+    </aside>
 
-    <!-- SweetAlert2 cho thông báo & xác nhận xóa chuyên nghiệp -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    @yield('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const toggleBtn = document.getElementById('chat-toggle');
-            const chatPopup = document.getElementById('chat-popup');
-            const closeBtn = document.getElementById('chat-close');
-            const chatMessages = document.getElementById('chat-messages');
-            const chatInput = document.getElementById('chat-input');
-            const sendBtn = document.getElementById('send-btn');
-            const userList = document.getElementById('user-list');
+    <!-- 2. NỘI DUNG CHÍNH -->
+    <div class="admin-main">
+        <!-- TOPBAR -->
+        <header class="admin-topbar">
+            <div>
+                <h1 class="page-header-title">@yield('page_title', 'Hệ Thống Quản Lý')</h1>
+                <div class="page-header-breadcrumb">@yield('page_breadcrumb', 'Bảng điều khiển quản trị')</div>
+            </div>
+            <div>
+                @yield('topbar_actions')
+            </div>
+        </header>
 
-            if (!toggleBtn || !chatPopup) return;
+        <!-- CONTENT BODY -->
+        <main class="content-body">
+            <!-- Thông báo Toast / Flash Message -->
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
+            @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <i class="fa-solid fa-circle-exclamation me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
 
-            let currentUserId = null;
+            @yield('content')
+        </main>
+    </div>
 
-            const loadUsers = () => {
-                fetch('{{ route("admin.chat.users") }}')
-                    .then(res => res.json())
-                    .then(users => {
-                        if (!userList) return;
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    @stack('scripts')
 
-                        if (!users.length) {
-                            userList.innerHTML = '<div class="p-2 text-muted text-center"><small>Chưa có hội thoại</small></div>';
-                            return;
-                        }
-
-                        let html = '';
-                        users.forEach(user => {
-                            const active = Number(currentUserId) === Number(user.id) ? 'active' : '';
-                            html += `
-                                <div class="user-item p-2 border-bottom ${active}" data-user-id="${user.id}" style="cursor:pointer; background:${active ? '#e0f2fe' : '#fff'};">
-                                    <strong>${user.name}</strong>
-                                </div>
-                            `;
-                        });
-                        userList.innerHTML = html;
-
-                        userList.querySelectorAll('.user-item').forEach(item => {
-                            item.addEventListener('click', function () {
-                                currentUserId = Number(this.dataset.userId);
-                                userList.querySelectorAll('.user-item').forEach(el => el.style.background = '#fff');
-                                this.style.background = '#e0f2fe';
-                                loadMessages();
-                            });
-                        });
-                    })
-                    .catch(() => {
-                        userList.innerHTML = '<div class="p-2 text-muted text-center"><small>Không thể tải danh sách</small></div>';
-                    });
-            };
-
-            const loadMessages = () => {
-                if (!currentUserId) {
-                    chatMessages.innerHTML = '<div class="text-center mt-5 text-muted">Chọn một khách hàng để xem tin nhắn</div>';
-                    return;
-                }
-
-                fetch(`/admin/chat/messages/${currentUserId}`)
-                    .then(res => res.json())
-                    .then(messages => {
-                        let html = '';
-                        messages.forEach(msg => {
-                            const isMine = Number(msg.sender_id) === Number('{{ Auth::id() }}');
-                            const senderName = isMine ? 'Bạn' : (msg.sender?.name || 'Khách hàng');
-                            const color = isMine ? 'rgb(37 99 235)' : '#111827';
-                            html += `<div class="mb-2" style="color:${color};"><strong>${senderName}:</strong> ${msg.content}</div>`;
-                        });
-                        chatMessages.innerHTML = html || '<div class="text-center mt-5 text-muted">Chưa có tin nhắn nào</div>';
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
-                    })
-                    .catch(() => {
-                        chatMessages.innerHTML = '<div class="text-center mt-5 text-danger">Không thể tải tin nhắn</div>';
-                    });
-            };
-
-            const sendMessage = () => {
-                const message = chatInput.value.trim();
-                if (!message || !currentUserId) return;
-
-                fetch('{{ route("admin.chat.send") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ user_id: currentUserId, message })
-                })
-                    .then(res => res.json())
-                    .then(() => {
-                        chatInput.value = '';
-                        loadMessages();
-                    })
-                    .catch(() => {
-                        chatInput.value = '';
-                    });
-            };
-
-            toggleBtn.addEventListener('click', () => {
-                chatPopup.style.display = chatPopup.style.display === 'none' ? 'block' : 'none';
-                if (chatPopup.style.display === 'block') {
-                    loadUsers();
-                }
-            });
-
-            closeBtn.addEventListener('click', () => {
-                chatPopup.style.display = 'none';
-            });
-
-            sendBtn.addEventListener('click', sendMessage);
-            chatInput.addEventListener('keydown', function (event) {
-                if (event.key === 'Enter') {
-                    sendMessage();
-                }
-            });
-
-            setInterval(() => {
-                if (chatPopup.style.display === 'block') {
-                    loadUsers();
-                    loadMessages();
-                }
-            }, 3000);
-        });
-    </script>
 </body>
+
 </html>

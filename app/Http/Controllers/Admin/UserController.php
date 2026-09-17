@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
@@ -14,7 +15,6 @@ class UserController extends Controller
     public function index(): View
     {
         $users = User::withCount('orders')->latest()->paginate(25);
-
         return view('admin.users.index', compact('users'));
     }
 
@@ -35,7 +35,7 @@ class UserController extends Controller
         ]);
 
         return redirect()->route('admin.dashboard', ['section' => 'users'])
-            ->with('success', 'Đã thêm tài khoản mới.');
+            ->with('success', 'Tạo tài khoản mới thành công.');
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -50,25 +50,27 @@ class UserController extends Controller
         $user->name = $validated['name'];
         $user->email = $validated['email'];
         $user->role = $validated['role'];
+
         if (!empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }
+
         $user->save();
 
         return redirect()->route('admin.dashboard', ['section' => 'users'])
-            ->with('success', 'Đã cập nhật tài khoản.');
+            ->with('success', 'Cập nhật tài khoản thành công.');
     }
 
     public function destroy(User $user): RedirectResponse
     {
-        if ($user->is(auth()->user())) {
+        if ($user->id === Auth::id()) {
             return redirect()->route('admin.dashboard', ['section' => 'users'])
-                ->with('error', 'Không thể xóa tài khoản đang đăng nhập.');
+                ->with('error', 'Không thể xóa tài khoản của chính bạn đang đăng nhập.');
         }
 
         $user->delete();
 
         return redirect()->route('admin.dashboard', ['section' => 'users'])
-            ->with('success', 'Đã xóa tài khoản.');
+            ->with('success', 'Đã xóa tài khoản thành công.');
     }
 }

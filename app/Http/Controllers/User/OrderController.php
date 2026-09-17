@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\PaymentTransaction;
 use App\Models\OrderStatusHistory;
-use App\Models\InventoryMovement;
-use App\Services\GHNService;
+use App\Models\PaymentTransaction;
+use App\Models\Product;
+use App\Models\User;
 use App\Services\GHNOrderService;
+use App\Services\GHNService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,17 +20,9 @@ use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
-    // ==========================================
-    // 1. CÁC VIEW HIỂN THỊ ĐƠN HÀNG & THANH TOÁN
-    // ==========================================
     public function index()
     {
-        $cart = session('cart', []);
-        if (empty($cart)) {
-            return redirect()->route('cart.index')->with('error', 'Giỏ hàng đang trống.');
-        }
-        $totalPrice = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
-        return view('checkout.index', compact('cart', 'totalPrice'));
+        return view('checkout.index');
     }
 
     public function orderHistory()
@@ -37,14 +31,16 @@ class OrderController extends Controller
             ->with(['items.product'])
             ->orderByDesc('created_at')
             ->paginate(10);
+
         return view('user.payment.order', compact('orders'));
     }
 
     public function show(Order $order)
     {
+        /** @var User|null $user */
         $user = Auth::user();
         $isOwner = $user && $order->user_id === $user->id;
-        $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
+        $isAdmin = $user && $user->isAdmin();
 
         if (!$isOwner && !$isAdmin) {
             abort(403);
@@ -54,9 +50,6 @@ class OrderController extends Controller
         return view('user.payment.show', compact('order'));
     }
 
-    // ==========================================
-    // 2. AJAX LOCATION & TÍNH PHÍ GHN
-    // ==========================================
     public function getProvinces(GHNService $ghn)
     {
         return response()->json($ghn->getProvinces());
@@ -75,8 +68,13 @@ class OrderController extends Controller
     public function getShippingFee(Request $request, GHNService $ghn)
     {
         $cart = $this->cartItemsFromRequest($request);
-        $totalWeight = collect($cart)->sum(function (array $item) {
-            return ((int) ($item['weight'] ?? 200)) * (int) ($item['quantity'] ?? 0);
+        $productIds = collect($cart)->pluck('id')->filter()->all();
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+        $totalWeight = collect($cart)->sum(function (array $item) use ($products) {
+            $product = $products->get((int) ($item['id'] ?? 0));
+            $weight = (int) ($product->weight ?? 200);
+            return $weight * (int) ($item['quantity'] ?? 1);
         });
 
         $toDistrictId = (int) $request->input('to_district_id');
@@ -86,16 +84,12 @@ class OrderController extends Controller
             return response()->json(['code' => 400, 'message' => 'Mã quận/huyện không hợp lệ.']);
         }
 
-        $res = $ghn->calculateFee([
+        $res = $ghn->calculateFee(array_merge([
             'service_type_id' => 2,
             'from_district_id' => (int) config('services.ghn.from_district_id', 1450),
             'to_district_id' => $toDistrictId,
             'to_ward_code' => $toWardCode,
-            'weight' => $totalWeight > 0 ? $totalWeight : 300,
-            'length' => 15,
-            'width' => 15,
-            'height' => 10,
-        ]);
+        ], $ghn->packageParameters($totalWeight > 0 ? $totalWeight : 300)));
 
         return response()->json($res);
     }
@@ -103,9 +97,7 @@ class OrderController extends Controller
     public function processPayment(Request $request, GHNService $ghn, GHNOrderService $ghnOrders)
     {
         if (!Auth::check()) {
-            return response()->json([
-                'message' => 'Bạn cần đăng nhập để đặt hàng.',
-            ], 401);
+            return response()->json(['message' => 'Vui lòng đăng nhập để tiếp tục.'], 401);
         }
 
         $validated = $request->validate([
@@ -120,53 +112,58 @@ class OrderController extends Controller
 
         $cart = json_decode($validated['cart_items'], true);
         if (!is_array($cart) || empty($cart)) {
-            throw ValidationException::withMessages([
-                'cart_items' => 'Giỏ hàng đang trống.',
-            ]);
+            throw ValidationException::withMessages(['cart_items' => 'Giỏ hàng đang trống.']);
         }
 
-        $productMap = \App\Models\Product::whereIn('id', collect($cart)->pluck('id')->filter()->all())->get()->keyBy('id');
-        foreach ($cart as $item) {
-            $productId = (int) ($item['id'] ?? 0);
-            $quantity = (int) ($item['quantity'] ?? 0);
-            $product = $productMap->get($productId);
+        $order = DB::transaction(function () use ($validated, $cart, $ghn) {
+            $productIds = collect($cart)->pluck('id')->filter()->all();
+            $products = Product::whereIn('id', $productIds)->lockForUpdate()->get()->keyBy('id');
 
-            if (!$product) {
-                throw ValidationException::withMessages([
-                    'cart_items' => 'Một sản phẩm trong giỏ hàng không còn tồn tại.',
-                ]);
+            $subtotal = 0;
+            $totalWeight = 0;
+            $orderItemsData = [];
+
+            foreach ($cart as $item) {
+                $productId = (int) ($item['id'] ?? 0);
+                $quantity = (int) ($item['quantity'] ?? 0);
+                $product = $products->get($productId);
+
+                if (!$product) {
+                    throw ValidationException::withMessages(['cart_items' => "Sản phẩm ID #{$productId} không tồn tại."]);
+                }
+
+                if ($quantity <= 0 || $product->stock < $quantity) {
+                    throw ValidationException::withMessages([
+                        'cart_items' => "Sản phẩm \"{$product->name}\" không đủ hàng trong kho (Còn: {$product->stock})."
+                    ]);
+                }
+
+                $dbPrice = (float) $product->price;
+                $subtotal += $dbPrice * $quantity;
+                $itemWeight = (int) ($product->weight ?? 200);
+                $totalWeight += $itemWeight * $quantity;
+
+                $orderItemsData[] = [
+                    'product' => $product,
+                    'quantity' => $quantity,
+                    'price' => $dbPrice,
+                ];
             }
 
-            if ($quantity <= 0 || $product->stock < $quantity) {
-                throw ValidationException::withMessages([
-                    'cart_items' => 'Sản phẩm "' . $product->name . '" không đủ tồn kho để đặt hàng.',
-                ]);
-            }
-        }
+            $feeResponse = $ghn->calculateFee(array_merge([
+                'service_type_id' => 2,
+                'from_district_id' => (int) config('services.ghn.from_district_id', 1450),
+                'to_district_id' => (int) $validated['to_district_id'],
+                'to_ward_code' => (string) $validated['to_ward_code'],
+            ], $ghn->packageParameters($totalWeight > 0 ? $totalWeight : 300)));
 
-        $subtotal = collect($cart)->sum(function (array $item) {
-            return (float) ($item['price'] ?? 0) * (int) ($item['quantity'] ?? 0);
-        });
+            $shippingFee = ($feeResponse['code'] ?? 0) === 200 && isset($feeResponse['data']['total'])
+                ? (int) $feeResponse['data']['total']
+                : 0;
 
-        $totalWeight = collect($cart)->sum(function (array $item) use ($ghn) {
-            return ((int) ($item['weight'] ?? $ghn->productWeight())) * (int) ($item['quantity'] ?? 0);
-        });
+            $finalTotal = $subtotal + $shippingFee;
 
-        $feeResponse = $ghn->calculateFee(array_merge([
-            'service_type_id' => 2,
-            'from_district_id' => (int) config('services.ghn.from_district_id', 0),
-            'to_district_id' => (int) $validated['to_district_id'],
-            'to_ward_code' => (string) $validated['to_ward_code'],
-        ], $ghn->packageParameters($totalWeight > 0 ? $totalWeight : 300)));
-
-        $shippingFee = ((isset($feeResponse['code']) && (int) $feeResponse['code'] === 200) && isset($feeResponse['data']['total']))
-            ? (int) $feeResponse['data']['total']
-            : 0;
-
-        $finalTotal = $subtotal + $shippingFee;
-
-        $order = DB::transaction(function () use ($validated, $cart, $shippingFee, $finalTotal) {
-            $order = Order::create([
+            $newOrder = Order::create([
                 'user_id' => Auth::id(),
                 'name' => $validated['name'],
                 'address' => $validated['address'],
@@ -178,57 +175,47 @@ class OrderController extends Controller
                 'ghn_total_fee' => $shippingFee,
                 'shipping_status' => 'pending',
             ]);
+
             OrderStatusHistory::create([
-                'order_id' => $order->id,
+                'order_id' => $newOrder->id,
                 'status' => 'pending',
-                'note' => 'Đơn hàng được tạo',
+                'note' => 'Khởi tạo đơn hàng',
                 'changed_by' => Auth::id(),
             ]);
 
-            foreach ($cart as $item) {
-                $product = \App\Models\Product::find((int) ($item['id'] ?? 0));
-                if ($product) {
-                    $quantity = (int) ($item['quantity'] ?? 1);
-                    $product->decrement('stock', $quantity);
-                    InventoryMovement::create([
-                        'product_id' => $product->id,
-                        'user_id' => Auth::id(),
-                        'type' => 'out',
-                        'quantity' => -$quantity,
-                        'stock_after' => $product->fresh()->stock,
-                        'note' => 'Trừ tồn kho khi đặt đơn #' . $order->id,
-                    ]);
-                }
+            foreach ($orderItemsData as $itemData) {
+                $product = $itemData['product'];
+                $quantity = $itemData['quantity'];
+
+                $product->decrement('stock', $quantity);
+
+                InventoryMovement::create([
+                    'product_id' => $product->id,
+                    'user_id' => Auth::id(),
+                    'type' => 'out',
+                    'quantity' => -$quantity,
+                    'stock_after' => $product->fresh()->stock,
+                    'note' => "Trừ kho đơn hàng #{$newOrder->id}",
+                ]);
 
                 OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => (int) ($item['id'] ?? 0),
-                    'quantity' => (int) ($item['quantity'] ?? 1),
-                    'price' => (float) ($item['price'] ?? 0),
+                    'order_id' => $newOrder->id,
+                    'product_id' => $product->id,
+                    'quantity' => $quantity,
+                    'price' => $itemData['price'],
                 ]);
             }
 
-            return $order;
+            return $newOrder;
         });
 
         if ($validated['payment_method'] === 'momo') {
-            PaymentTransaction::create([
-                'order_id' => $order->id,
-                'gateway' => 'momo',
-                'amount' => $order->total_price,
-                'status' => 'pending',
-            ]);
-
             $redirectUrl = route('user.orders.momo.start', $order);
-
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'Đơn hàng đã được tạo. Đang chuyển đến MoMo.',
-                    'redirect_url' => $redirectUrl,
-                ]);
-            }
-
-            return redirect()->to($redirectUrl);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Đang chuyển hướng sang MoMo...',
+                'redirect_url' => $redirectUrl,
+            ]);
         }
 
         PaymentTransaction::create([
@@ -236,7 +223,7 @@ class OrderController extends Controller
             'gateway' => 'cod',
             'amount' => $order->total_price,
             'status' => 'pending',
-            'message' => 'Thanh toán khi nhận hàng',
+            'message' => 'Thanh toán tiền mặt khi nhận hàng (COD)',
         ]);
 
         $order->load('items.product');
@@ -248,88 +235,91 @@ class OrderController extends Controller
                 'ghn_order_code' => $ghnOrderResponse['data']['order_code'],
                 'shipping_status' => 'ready_to_pick',
             ]);
+
             OrderStatusHistory::create([
                 'order_id' => $order->id,
                 'status' => 'cod_ordered',
-                'note' => 'Đã tạo vận đơn GHN',
+                'note' => 'Tạo vận đơn GHN tự động thành công',
                 'changed_by' => Auth::id(),
             ]);
 
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'Đặt hàng thành công! Mã vận đơn GHN: ' . $ghnOrderResponse['data']['order_code'],
-                    'redirect_url' => route('user.orders.index'),
-                    'status' => 'success',
-                ]);
-            }
-
-            return redirect()->route('user.orders.index')
-                ->with('success', 'Đặt hàng thành công! Mã vận đơn GHN: ' . $ghnOrderResponse['data']['order_code']);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Đặt hàng thành công! Mã vận đơn GHN: ' . $ghnOrderResponse['data']['order_code'],
+                'redirect_url' => route('user.orders.index'),
+            ]);
         }
 
         Log::error('GHN COD Order Failed: ', $ghnOrderResponse ?? []);
         $order->update(['status' => 'cod_ordered']);
 
-        if ($request->expectsJson()) {
-            return response()->json([
-                'message' => 'Đặt hàng thành công nhưng chưa thể tạo vận đơn GHN tự động.',
-                'redirect_url' => route('user.orders.index'),
-                'status' => 'warning',
-            ]);
-        }
-
-        return redirect()->route('user.orders.index')
-            ->with('warning', 'Đặt hàng thành công nhưng chưa thể tạo vận đơn GHN tự động.');
+        return response()->json([
+            'status' => 'warning',
+            'message' => 'Đặt hàng thành công! (Vận đơn GHN sẽ được admin xử lý sau).',
+            'redirect_url' => route('user.orders.index'),
+        ]);
     }
 
-    public function cancel(Order $order)
+    public function cancel(Order $order, GHNService $ghn)
     {
+        /** @var User|null $user */
         $user = Auth::user();
+
         if (!$user || ($order->user_id !== $user->id && !$user->isAdmin())) {
             abort(403);
         }
 
-        if ($order->status === 'cancelled') {
-            return back()->with('info', 'Đơn hàng này đã bị hủy trước đó.');
+        if (in_array($order->status, ['shipping', 'delivered', 'cancelled'], true)) {
+            return back()->with('error', 'Đơn hàng không thể hủy ở trạng thái hiện tại.');
         }
 
-        foreach ($order->items as $item) {
-            if ($item->product) {
-                $item->product->increment('stock', $item->quantity);
-                InventoryMovement::create([
-                    'product_id' => $item->product->id,
-                    'user_id' => $user->id,
-                    'type' => 'in',
-                    'quantity' => $item->quantity,
-                    'stock_after' => $item->product->fresh()->stock,
-                    'note' => 'Hoàn tồn kho khi hủy đơn #' . $order->id,
-                ]);
+        DB::transaction(function () use ($order, $user, $ghn) {
+            if (!empty($order->ghn_order_code)) {
+                try {
+                    $ghn->cancelOrder([$order->ghn_order_code]);
+                } catch (\Exception $e) {
+                    Log::warning("Không thể hủy vận đơn GHN #{$order->ghn_order_code}: " . $e->getMessage());
+                }
             }
-        }
 
-        $order->status = 'cancelled';
-        $order->shipping_status = 'cancelled';
-        $order->save();
-        OrderStatusHistory::create([
-            'order_id' => $order->id,
-            'status' => 'cancelled',
-            'note' => 'Đơn hàng được hủy',
-            'changed_by' => $user->id,
-        ]);
+            foreach ($order->items as $item) {
+                if ($item->product) {
+                    $item->product->increment('stock', $item->quantity);
 
-        return back()->with('success', 'Đơn hàng đã được hủy và tồn kho đã được hoàn trả.');
+                    InventoryMovement::create([
+                        'product_id' => $item->product->id,
+                        'user_id' => $user->id,
+                        'type' => 'in',
+                        'quantity' => $item->quantity,
+                        'stock_after' => $item->product->fresh()->stock,
+                        'note' => "Hoàn kho khi hủy đơn #{$order->id}",
+                    ]);
+                }
+            }
+
+            $order->update([
+                'status' => 'cancelled',
+                'shipping_status' => 'cancelled',
+            ]);
+
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'status' => 'cancelled',
+                'note' => 'Hủy đơn hàng và hoàn trả tồn kho',
+                'changed_by' => $user->id,
+            ]);
+        });
+
+        return back()->with('success', 'Đơn hàng đã được hủy và tồn kho đã được hoàn lại.');
     }
 
     private function cartItemsFromRequest(Request $request): array
     {
         $rawItems = $request->input('cart_items', '[]');
-
         if (is_array($rawItems)) {
             return $rawItems;
         }
-
         $decoded = json_decode((string) $rawItems, true);
-
         return is_array($decoded) ? $decoded : [];
     }
 }

@@ -13,7 +13,6 @@ class ChatController extends Controller
     public function getUsers()
     {
         $adminId = Auth::id();
-
         $userIds = Message::where('receiver_id', $adminId)
             ->orWhere('sender_id', $adminId)
             ->orderByDesc('created_at')
@@ -38,10 +37,9 @@ class ChatController extends Controller
             });
     }
 
-    public function getMessages($userId)
+    public function getMessages(int $userId)
     {
         $adminId = Auth::id();
-
         Message::where('sender_id', $userId)
             ->where('receiver_id', $adminId)
             ->where('is_read', false)
@@ -68,10 +66,10 @@ class ChatController extends Controller
         ]);
 
         $message = Message::create([
-            'sender_id' => Auth::id(),
+            'sender_id'   => Auth::id(),
             'receiver_id' => $request->user_id,
-            'content' => trim($request->message),
-            'is_read' => true,
+            'content'     => trim($request->message),
+            'is_read'     => false,
         ]);
 
         return response()->json($message->load('sender'));
