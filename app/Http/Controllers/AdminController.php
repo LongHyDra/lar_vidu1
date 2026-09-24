@@ -37,9 +37,9 @@ class AdminController extends Controller
         }
 
         $activeOrders = Order::whereNotIn('status', ['cancelled']);
-
         $fromDate = $request->input('from');
         $toDate = $request->input('to');
+
         if ($fromDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fromDate)) {
             $activeOrders->where('created_at', '>=', Carbon::parse($fromDate)->startOfDay());
         } else {
@@ -59,29 +59,33 @@ class AdminController extends Controller
 
         $totalOrdersQuery = Order::query();
         $cancelledOrdersQuery = Order::where('status', 'cancelled');
+
         if ($fromDate) {
             $totalOrdersQuery->where('created_at', '>=', Carbon::parse($fromDate)->startOfDay());
             $cancelledOrdersQuery->where('created_at', '>=', Carbon::parse($fromDate)->startOfDay());
         }
+
         if ($toDate) {
             $totalOrdersQuery->where('created_at', '<=', Carbon::parse($toDate)->endOfDay());
             $cancelledOrdersQuery->where('created_at', '<=', Carbon::parse($toDate)->endOfDay());
         }
+
         $totalOrders = $totalOrdersQuery->count();
         $cancelledOrders = $cancelledOrdersQuery->count();
-
         $totalRevenue = (clone $activeOrders)->sum('total_price');
 
         $soldQtyQuery = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
             ->where('orders.status', '!=', 'cancelled');
+
         if ($fromDate) {
             $soldQtyQuery->where('orders.created_at', '>=', Carbon::parse($fromDate)->startOfDay());
         }
+
         if ($toDate) {
             $soldQtyQuery->where('orders.created_at', '<=', Carbon::parse($toDate)->endOfDay());
         }
-        $totalSoldQty = $soldQtyQuery->sum('order_items.quantity');
 
+        $totalSoldQty = $soldQtyQuery->sum('order_items.quantity');
         $todayRevenue = (clone $activeOrders)->whereDate('created_at', today())->sum('total_price');
         $monthRevenue = (clone $activeOrders)
             ->whereYear('created_at', now()->year)
@@ -92,27 +96,32 @@ class AdminController extends Controller
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->select('products.name', DB::raw('SUM(order_items.quantity) as total_qty'))
             ->where('orders.status', '!=', 'cancelled');
+
         if ($fromDate) {
             $topProductsQuery->where('orders.created_at', '>=', Carbon::parse($fromDate)->startOfDay());
         }
+
         if ($toDate) {
             $topProductsQuery->where('orders.created_at', '<=', Carbon::parse($toDate)->endOfDay());
         }
+
         $topProducts = $topProductsQuery->groupBy('products.id', 'products.name')->orderByDesc('total_qty')->limit(5)->get();
 
         $dailyRevenueQuery = Order::select(
             DB::raw('DATE(created_at) as date'),
             DB::raw('SUM(total_price) as total_revenue')
-        )
-            ->whereNotIn('status', ['cancelled']);
+        )->whereNotIn('status', ['cancelled']);
+
         if ($fromDate) {
             $dailyRevenueQuery->where('created_at', '>=', Carbon::parse($fromDate)->startOfDay());
         } else {
             $dailyRevenueQuery->where('created_at', '>=', now()->subDays($period - 1)->startOfDay());
         }
+
         if ($toDate) {
             $dailyRevenueQuery->where('created_at', '<=', Carbon::parse($toDate)->endOfDay());
         }
+
         $dailyRevenue = $dailyRevenueQuery->groupBy(DB::raw('DATE(created_at)'))->orderBy('date')->get();
 
         $monthFormat = DB::getDriverName() === 'sqlite'
@@ -129,7 +138,8 @@ class AdminController extends Controller
             ->orderBy('month')
             ->get();
 
-        $recentOrders = Order::with('user', 'items.product')
+        // Nạp đầy đủ thông tin phục vụ xem chi tiết đơn hàng và tách biệt thanh toán
+        $recentOrders = Order::with(['user', 'items.product', 'paymentTransaction', 'statusHistories.user'])
             ->when($orderStatus, fn($query) => $query->where('status', $orderStatus))
             ->orderByDesc('created_at')
             ->get();
@@ -173,7 +183,6 @@ class AdminController extends Controller
     {
         $from = $request->input('from');
         $to = $request->input('to');
-
         $orders = Order::whereNotIn('status', ['cancelled'])
             ->when($from, fn($query) => $query->whereDate('created_at', '>=', $from))
             ->when($to, fn($query) => $query->whereDate('created_at', '<=', $to))
@@ -194,7 +203,6 @@ class AdminController extends Controller
     {
         $from = $request->input('from');
         $to = $request->input('to');
-
         $orders = Order::with('user')
             ->whereNotIn('status', ['cancelled'])
             ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
@@ -277,12 +285,25 @@ class AdminController extends Controller
         if ($newStatus === 'cancelled') {
             $order->shipping_status = 'cancelled';
         }
+
+        // Tự động đồng bộ sang bảng thanh toán: Khi giao hàng thành công, đơn COD chuyển sang Đã thu tiền
+        if ($newStatus === 'delivered') {
+            $payment = $order->paymentTransaction;
+            if ($payment && $payment->status !== 'paid') {
+                $payment->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                    'message' => 'Admin xác nhận giao hàng thành công (Đã thu tiền)',
+                ]);
+            }
+        }
+
         $order->save();
 
         OrderStatusHistory::create([
             'order_id' => $order->id,
             'status' => $newStatus,
-            'note' => 'Admin cập nhật trạng thái',
+            'note' => 'Admin cập nhật trạng thái: ' . $newStatus,
             'changed_by' => Auth::id(),
         ]);
 

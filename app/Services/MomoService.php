@@ -6,15 +6,21 @@ use App\Models\Order;
 use App\Models\PaymentTransaction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class MomoService
 {
-    public function createPayment(Order $order, PaymentTransaction $transaction): array
+    /**
+     * Khởi tạo giao dịch MoMo với $requestType linh hoạt (payWithATM hoặc payWithCC)
+     */
+    public function createPayment(Order $order, PaymentTransaction $transaction, string $requestType = 'payWithATM'): array
     {
-        $endpoint = config('services.momo.endpoint', 'https://test-payment.momo.vn/v2/gateway/api/create');
-        $partnerCode = config('services.momo.partner_code', env('MOMO_PARTNER_CODE', ''));
-        $accessKey = config('services.momo.access_key', env('MOMO_ACCESS_KEY', ''));
-        $secretKey = config('services.momo.secret_key', env('MOMO_SECRET_KEY', ''));
+        $endpoint = config('services.momo.endpoint', env('MOMO_ENDPOINT', 'https://test-payment.momo.vn/v2/gateway/api/create'));
+        
+        $partnerCode = config('services.momo.partner_code', env('MOMO_PARTNER_CODE', 'MOMO'));
+        $accessKey = config('services.momo.access_key', env('MOMO_ACCESS_KEY', 'F8BBA842ECF85'));
+        $secretKey = config('services.momo.secret_key', env('MOMO_SECRET_KEY', 'K951B6PE1wa8ngf4S01072xExx'));
+
         $orderInfo = 'Thanh toan don hang #' . $order->id;
         $amount = (string) ((int) $order->total_price);
         $orderId = $order->id . '_' . $transaction->id . '_' . time();
@@ -22,7 +28,6 @@ class MomoService
         $ipnUrl = config('services.momo.ipn_url') ?: route('payment.momo.ipn');
         $extraData = (string) $order->id;
         $requestId = (string) time();
-        $requestType = 'payWithCC';
 
         $rawHash = 'accessKey=' . $accessKey .
             '&amount=' . $amount .
@@ -35,10 +40,12 @@ class MomoService
             '&requestId=' . $requestId .
             '&requestType=' . $requestType;
 
+        $signature = hash_hmac('sha256', $rawHash, $secretKey);
+
         $data = [
             'partnerCode' => $partnerCode,
-            'partnerName' => 'Fruit Shop',
-            'storeId' => 'MomoStore',
+            'partnerName' => 'PHỤ KIỆN XE MÁY 247',
+            'storeId' => 'PKXM247',
             'requestId' => $requestId,
             'amount' => $amount,
             'orderId' => $orderId,
@@ -48,7 +55,7 @@ class MomoService
             'lang' => 'vi',
             'extraData' => $extraData,
             'requestType' => $requestType,
-            'signature' => hash_hmac('sha256', $rawHash, $secretKey),
+            'signature' => $signature,
         ];
 
         $transaction->update([
@@ -56,11 +63,20 @@ class MomoService
             'request_payload' => $data,
         ]);
 
-        $response = Http::withOptions([
-            'verify' => filter_var(config('services.momo.verify_ssl', true), FILTER_VALIDATE_BOOLEAN),
-        ])->acceptJson()->post($endpoint, $data);
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])->acceptJson()->timeout(15)->post($endpoint, $data);
 
-        $result = $response->json() ?? [];
+            $result = $response->json() ?? [];
+        } catch (\Exception $e) {
+            Log::error('MoMo connection error: ' . $e->getMessage());
+            $result = [
+                'resultCode' => -1,
+                'message' => 'Lỗi kết nối cổng MoMo: ' . $e->getMessage()
+            ];
+        }
+
         $transaction->update([
             'response_payload' => $result,
             'result_code' => isset($result['resultCode']) ? (int) $result['resultCode'] : null,
@@ -110,8 +126,8 @@ class MomoService
             return false;
         }
 
-        $accessKey = config('services.momo.access_key', '');
-        $secretKey = config('services.momo.secret_key', '');
+        $accessKey = config('services.momo.access_key', env('MOMO_ACCESS_KEY', 'F8BBA842ECF85'));
+        $secretKey = config('services.momo.secret_key', env('MOMO_SECRET_KEY', 'K951B6PE1wa8ngf4S01072xExx'));
 
         $rawHash = 'accessKey=' . $accessKey .
             '&amount=' . ($payload['amount'] ?? '') .
@@ -136,7 +152,6 @@ class MomoService
     public function orderId(array $payload): ?int
     {
         $orderId = $payload['extraData'] ?? null;
-
         return is_numeric($orderId) ? (int) $orderId : null;
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Admin\ChatController as AdminChatController;
+use App\Http\Controllers\Admin\FinanceController; // <-- THÊM DÒNG NÀY
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\PaymentTransactionController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
@@ -24,15 +25,12 @@ use Illuminate\Support\Facades\Schema;
 
 /*
 |--------------------------------------------------------------------------
-| 1. PUBLIC ROUTES (Không cần đăng nhập)
+| 1. PUBLIC ROUTES
 |--------------------------------------------------------------------------
 */
-
-// Callbacks MoMo
 Route::post('/payment/momo/ipn', [MomoController::class, 'ipn'])->name('payment.momo.ipn');
 Route::get('/payment/momo/callback', [MomoController::class, 'callback'])->name('user.payment.momo.callback');
 
-// GHN Locations & Fee
 Route::prefix('locations')->name('locations.')->group(function () {
     Route::get('/provinces', [OrderController::class, 'getProvinces'])->name('provinces');
     Route::get('/districts/{provinceId}', [OrderController::class, 'getDistricts'])->name('districts');
@@ -40,13 +38,11 @@ Route::prefix('locations')->name('locations.')->group(function () {
     Route::post('/calculate-fee', [OrderController::class, 'getShippingFee'])->name('fee');
 });
 
-// Giỏ hàng, checkout & FAQ
 Route::get('/cart', fn() => view('cart.index'))->name('cart.index');
 Route::get('/cart/index', fn() => view('cart.index'));
 Route::get('/checkout', fn() => view('checkout.index'))->name('checkout.index');
 Route::view('/faq', 'faq')->name('faq');
 
-// Trang chủ
 Route::get('/', function () {
     try {
         $query = Product::with('category');
@@ -121,7 +117,6 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
-    // Khách hàng cá nhân
     Route::prefix('user')->name('user.')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -146,7 +141,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/chat/messages', [UserChatController::class, 'getMessages'])->name('chat.messages');
     });
 
-    // Quản lý sản phẩm & danh mục (Admin, Editor, Manager)
     Route::middleware('roles:admin,editor,manager')->group(function () {
         Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
         Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
@@ -155,14 +149,12 @@ Route::middleware('auth')->group(function () {
         Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
 
         Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-        // Route create PHẢI ĐỨNG TRƯỚC {product}
         Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
         Route::post('/products', [ProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
         Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     });
 
-    // Quyền xóa
     Route::middleware('admin')->group(function () {
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
         Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
@@ -173,9 +165,18 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::post('/orders/{order}/status', [AdminController::class, 'updateOrderStatus'])->name('orders.updateStatus');
 
+        // Báo cáo doanh thu
         Route::get('/reports/revenue.csv', [AdminController::class, 'exportRevenueCsv'])->name('reports.revenue.csv');
         Route::get('/reports/revenue/excel', [AdminController::class, 'exportRevenueExcel'])->name('reports.revenue.excel');
         Route::get('/reports/revenue/print', [AdminController::class, 'printRevenueReport'])->name('reports.revenue.print');
+
+        // MODULE THỐNG KÊ TÀI CHÍNH & GIAO DỊCH (LAB 9)
+        Route::prefix('finance')->name('finance.')->group(function () {
+            Route::get('/', [FinanceController::class, 'index'])->name('index');
+            Route::get('/transactions', [FinanceController::class, 'transactions'])->name('transactions');
+            Route::get('/export', [FinanceController::class, 'export'])->name('export');
+            Route::patch('/orders/{order}/status', [FinanceController::class, 'updateStatus'])->name('update-status');
+        });
 
         Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets.index');
         Route::put('/tickets/{ticket}', [AdminTicketController::class, 'update'])->name('tickets.update');
@@ -193,11 +194,6 @@ Route::middleware('auth')->group(function () {
     });
 });
 
-/*
-|--------------------------------------------------------------------------
-| 4. PUBLIC PRODUCT DETAIL (Đặt ở cuối để không ghi đè /products/create)
-|--------------------------------------------------------------------------
-*/
 Route::get('/products/{product}', [ProductController::class, 'show'])
     ->name('products.show')
     ->whereNumber('product');

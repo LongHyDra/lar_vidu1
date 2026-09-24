@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\GHNOrderService;
 use App\Services\GHNService;
+use App\Services\MomoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,7 @@ class OrderController extends Controller
         }
 
         $order->load('items.product', 'statusHistories.user', 'paymentTransaction');
+
         return view('user.payment.show', compact('order'));
     }
 
@@ -94,19 +96,20 @@ class OrderController extends Controller
         return response()->json($res);
     }
 
-    public function processPayment(Request $request, GHNService $ghn, GHNOrderService $ghnOrders)
+    public function processPayment(Request $request, GHNService $ghn, GHNOrderService $ghnOrders, MomoService $momoService)
     {
         if (!Auth::check()) {
-            return response()->json(['message' => 'Vui lòng đăng nhập để tiếp tục.'], 401);
+            return response()->json(['message' => 'Vui lòng đăng nhập để thanh toán.'], 401);
         }
 
+        // Hỗ trợ COD, Thẻ ATM nội địa (momo_atm), Thẻ quốc tế (momo_cc)
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'regex:/^0\d{9}$/'],
             'address' => ['required', 'string', 'max:255'],
             'to_district_id' => ['required', 'integer'],
             'to_ward_code' => ['required', 'string'],
-            'payment_method' => ['required', 'in:cod,momo'],
+            'payment_method' => ['required', 'in:cod,momo,momo_atm,momo_cc'],
             'cart_items' => ['required', 'string'],
         ]);
 
@@ -179,7 +182,7 @@ class OrderController extends Controller
             OrderStatusHistory::create([
                 'order_id' => $newOrder->id,
                 'status' => 'pending',
-                'note' => 'Khởi tạo đơn hàng',
+                'note' => 'Khách hàng khởi tạo đơn hàng',
                 'changed_by' => Auth::id(),
             ]);
 
@@ -195,7 +198,7 @@ class OrderController extends Controller
                     'type' => 'out',
                     'quantity' => -$quantity,
                     'stock_after' => $product->fresh()->stock,
-                    'note' => "Trừ kho đơn hàng #{$newOrder->id}",
+                    'note' => "Trừ kho cho đơn hàng #{$newOrder->id}",
                 ]);
 
                 OrderItem::create([
@@ -209,15 +212,37 @@ class OrderController extends Controller
             return $newOrder;
         });
 
-        if ($validated['payment_method'] === 'momo') {
-            $redirectUrl = route('user.orders.momo.start', $order);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Đang chuyển hướng sang MoMo...',
-                'redirect_url' => $redirectUrl,
+        // 1. XỬ LÝ THANH TOÁN THẺ MOMO (NỘI ĐỊA HOẶC QUỐC TẾ)
+        if (in_array($validated['payment_method'], ['momo', 'momo_atm', 'momo_cc'], true)) {
+            $isCC = ($validated['payment_method'] === 'momo_cc');
+            $requestType = $isCC ? 'payWithCC' : 'payWithATM';
+            $methodTitle = $isCC ? 'Thanh toán Thẻ quốc tế Visa/Master' : 'Thanh toán Thẻ ATM nội địa (Napas)';
+
+            $transaction = PaymentTransaction::create([
+                'order_id' => $order->id,
+                'gateway' => 'momo',
+                'amount' => $order->total_price,
+                'status' => 'pending',
+                'message' => $methodTitle,
             ]);
+
+            $momoResult = $momoService->createPayment($order, $transaction, $requestType);
+
+            if (!empty($momoResult['payUrl'])) {
+                return response()->json([
+                    'status' => 'success',
+                    'payment_method' => $validated['payment_method'],
+                    'redirect_url' => $momoResult['payUrl'],
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Lỗi kết nối cổng thanh toán thẻ: ' . ($momoResult['message'] ?? 'Không lấy được đường dẫn thanh toán.'),
+            ], 422);
         }
 
+        // 2. XỬ LÝ COD
         PaymentTransaction::create([
             'order_id' => $order->id,
             'gateway' => 'cod',
@@ -245,6 +270,7 @@ class OrderController extends Controller
 
             return response()->json([
                 'status' => 'success',
+                'payment_method' => 'cod',
                 'message' => 'Đặt hàng thành công! Mã vận đơn GHN: ' . $ghnOrderResponse['data']['order_code'],
                 'redirect_url' => route('user.orders.index'),
             ]);
@@ -255,7 +281,8 @@ class OrderController extends Controller
 
         return response()->json([
             'status' => 'warning',
-            'message' => 'Đặt hàng thành công! (Vận đơn GHN sẽ được admin xử lý sau).',
+            'payment_method' => 'cod',
+            'message' => 'Đặt hàng thành công! (Vận đơn GHN sẽ được quản trị viên xử lý sau).',
             'redirect_url' => route('user.orders.index'),
         ]);
     }
@@ -264,7 +291,6 @@ class OrderController extends Controller
     {
         /** @var User|null $user */
         $user = Auth::user();
-
         if (!$user || ($order->user_id !== $user->id && !$user->isAdmin())) {
             abort(403);
         }
@@ -285,14 +311,13 @@ class OrderController extends Controller
             foreach ($order->items as $item) {
                 if ($item->product) {
                     $item->product->increment('stock', $item->quantity);
-
                     InventoryMovement::create([
                         'product_id' => $item->product->id,
                         'user_id' => $user->id,
                         'type' => 'in',
                         'quantity' => $item->quantity,
                         'stock_after' => $item->product->fresh()->stock,
-                        'note' => "Hoàn kho khi hủy đơn #{$order->id}",
+                        'note' => "Hoàn kho khi hủy đơn hàng #{$order->id}",
                     ]);
                 }
             }
@@ -310,7 +335,7 @@ class OrderController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Đơn hàng đã được hủy và tồn kho đã được hoàn lại.');
+        return back()->with('success', 'Đơn hàng đã được hủy thành công.');
     }
 
     private function cartItemsFromRequest(Request $request): array
@@ -319,6 +344,7 @@ class OrderController extends Controller
         if (is_array($rawItems)) {
             return $rawItems;
         }
+
         $decoded = json_decode((string) $rawItems, true);
         return is_array($decoded) ? $decoded : [];
     }

@@ -98,10 +98,13 @@ class MomoController extends Controller
     private function redirectToMomo(Order $order, PaymentTransaction $transaction, MomoService $momo)
     {
         $result = $momo->createPayment($order, $transaction);
+        
+        if (isset($result['payUrl'])) {
+            return redirect($result['payUrl']);
+        }
 
-        return isset($result['payUrl'])
-            ? redirect($result['payUrl'])
-            : redirect()->route('user.orders.index')->with('error', 'Không thể kết nối tới MoMo.');
+        $errorMsg = $result['message'] ?? 'Không thể tạo phiên thanh toán MoMo.';
+        return redirect()->route('user.orders.index')->with('error', 'Lỗi MoMo: ' . $errorMsg);
     }
 
     private function completePayment(array $payload, GHNOrderService $ghnOrders, MomoService $momo): string
