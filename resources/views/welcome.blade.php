@@ -50,6 +50,7 @@
             z-index: 1030;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
+
         /* LOGO STYLES & ANIMATIONS */
         @keyframes badgeGlowPulse {
             0%, 100% { opacity: 0.5; filter: blur(6px); transform: scale(1); }
@@ -128,6 +129,7 @@
             font-size: 1.45rem;
             background: linear-gradient(135deg, #60a5fa, #3b82f6);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             filter: drop-shadow(0 2px 4px rgba(37,99,235,0.4));
             transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -155,6 +157,7 @@
         .text-gradient {
             background: linear-gradient(135deg, #0f172a 20%, #1e40af 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .badge-247 {
@@ -176,8 +179,6 @@
             margin-top: 2px;
             letter-spacing: 0.2px;
         }
-
-
 
         /* SEARCH BAR */
         .header-search {
@@ -244,7 +245,7 @@
             }
         }
 
-        /* NÚT GIỎ HÀNG ĐỄ NHÌN */
+        /* NÚT GIỎ HÀNG */
         .btn-cart-header {
             background: #eff6ff;
             color: #1d4ed8;
@@ -276,7 +277,7 @@
             border-radius: 12px;
         }
 
-        /* NÚT DANH MỤC (CHIPS) DỄ NHÌN */
+        /* NÚT DANH MỤC */
         .cat-chip {
             background: #ffffff;
             border: 2px solid #cbd5e1;
@@ -306,7 +307,7 @@
             box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
         }
 
-        /* CARD SẢN PHẨM & NÚT THÊM VÀO GIỎ */
+        /* CARD SẢN PHẨM */
         .product-card {
             background: #ffffff;
             border-radius: 14px;
@@ -346,7 +347,6 @@
             color: #cbd5e1;
             transition: transform 0.2s;
         }
-
         .product-card:hover .product-thumb > i {
             transform: scale(1.1);
             color: #1d4ed8;
@@ -383,6 +383,7 @@
             margin-bottom: 14px;
             display: -webkit-box;
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             flex: 1;
@@ -394,7 +395,7 @@
             margin-bottom: 14px;
         }
 
-        /* NÚT THÊM VÀO GIỎ HÀNG NỔI BẬT DỄ NHÌN */
+        /* NÚT THÊM VÀO GIỎ */
         .btn-add-cart-prominent {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: #ffffff;
@@ -433,71 +434,6 @@
             color: var(--muted);
         }
 
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.18);
-            color: #f8fafc;
-            padding: 8px 14px;
-            border-radius: 999px;
-            font-size: 0.76rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-        .hero-metric {
-            border: 1px solid rgba(148, 163, 184, 0.25);
-            background: rgba(15, 23, 42, 0.28);
-            border-radius: 14px;
-            padding: 14px 16px;
-            backdrop-filter: blur(2px);
-        }
-        .hero-metric strong {
-            display: block;
-            font-size: 1.1rem;
-            color: #ffffff;
-        }
-        .hero-metric span {
-            color: #cbd5e1;
-            font-size: 0.76rem;
-        }
-        .feature-strip {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px;
-            margin-top: 26px;
-        }
-        .feature-box {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(148,163,184,0.2);
-            border-radius: 16px;
-            padding: 18px 16px;
-            color: #e2e8f0;
-        }
-        .feature-box i {
-            display: inline-flex;
-            width: 38px;
-            height: 38px;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            background: rgba(59,130,246,0.16);
-            color: #bfdbfe;
-            margin-bottom: 10px;
-            font-size: 1rem;
-        }
-        .feature-box strong {
-            display: block;
-            margin-bottom: 4px;
-            font-size: 0.9rem;
-            color: #ffffff;
-        }
-        .feature-box span {
-            color: #cbd5e1;
-            font-size: 0.75rem;
-        }
         .benefit-section {
             background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
             border-radius: 26px;
@@ -540,14 +476,13 @@
             font-size: 0.76rem;
             line-height: 1.6;
         }
+
         @media (max-width: 991px) {
-            .feature-strip,
             .benefit-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
         @media (max-width: 575px) {
-            .feature-strip,
             .benefit-grid {
                 grid-template-columns: 1fr;
             }
@@ -574,7 +509,6 @@
     <header class="site-header">
         <div class="container py-3">
             <div class="d-flex align-items-center justify-content-between gap-3">
-                <!-- REDESIGNED LUXURY LOGO -->
                 <a href="{{ route('welcome') }}" class="brand-logo">
                     <div class="brand-badge-wrap">
                         <div class="brand-badge-glow"></div>
@@ -593,7 +527,6 @@
                         </div>
                     </div>
                 </a>
-
 
                 <!-- SEARCH BAR -->
                 <form action="{{ route('welcome') }}" method="GET" class="header-search d-none d-md-flex">
@@ -620,7 +553,7 @@
                         @endif
                     @endauth
 
-                    <!-- NÚT GIỎ HÀNG DỄ NHÌN Ở HEADER -->
+                    <!-- NÚT GIỎ HÀNG -->
                     <a href="{{ route('cart.index') }}" class="btn-cart-header">
                         <i class="fa-solid fa-cart-shopping fs-5"></i>
                         <span>Giỏ hàng</span>
@@ -723,7 +656,6 @@
 
     <!-- STOREFRONT MAIN CONTENT -->
     <main class="container">
-
         <!-- CATEGORIES FILTER CHIPS -->
         <div class="mb-4">
             <div class="d-flex align-items-center justify-content-between mb-3">
@@ -733,7 +665,6 @@
                 </a>
             </div>
 
-            <!-- CHIP BUTTONS DỄ NHÌN -->
             <form action="{{ route('welcome') }}" method="GET" class="row g-2 align-items-end mb-3">
                 <div class="col-12 col-md-4">
                     <label class="form-label small fw-bold mb-1" for="filter-q">Từ khóa</label>
@@ -809,7 +740,6 @@
                             @endif
                         </div>
 
-
                         <div class="product-details">
                             <h5 class="product-name" title="{{ $product->name }}">
                                 @if($product instanceof \App\Models\Product)
@@ -825,9 +755,13 @@
                                 <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold px-2 py-1">Còn {{ $product->stock }} SP</span>
                             </div>
 
-                            <!-- NÚT THÊM VÀO GIỎ HÀNG DỄ NHÌN VÀ NỔI BẬT -->
-                            <button type="button" class="btn-add-cart-prominent"
-                                onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }}, '{{ addslashes($product->category->name ?? 'Phụ kiện') }}', {{ $product->stock }})">
+                            <!-- NÚT THÊM VÀO GIỎ DÙNG DATA-* ĐỂ SẠCH LỖI JAVASCRIPT VS CODE -->
+                            <button type="button" class="btn-add-cart-prominent btn-add-cart-action"
+                                data-id="{{ $product->id }}"
+                                data-name="{{ $product->name }}"
+                                data-price="{{ $product->price }}"
+                                data-category="{{ $product->category->name ?? 'Phụ kiện' }}"
+                                data-stock="{{ $product->stock }}">
                                 <i class="fa-solid fa-cart-plus fs-6"></i>
                                 THÊM VÀO GIỎ HÀNG
                             </button>
@@ -849,7 +783,14 @@
                     </div>
                     <div class="row g-3">
                         @foreach($recentlyViewed->take(4) as $viewedProduct)
-                            <div class="col-6 col-md-3"><a href="{{ route('products.show', $viewedProduct) }}" class="text-decoration-none"><div class="bg-white border rounded-3 p-3 h-100"><div class="fw-bold text-dark">{{ $viewedProduct->name }}</div><div class="text-primary fw-bold mt-2">{{ number_format($viewedProduct->price, 0, ',', '.') }}đ</div></div></a></div>
+                            <div class="col-6 col-md-3">
+                                <a href="{{ route('products.show', $viewedProduct) }}" class="text-decoration-none">
+                                    <div class="bg-white border rounded-3 p-3 h-100">
+                                        <div class="fw-bold text-dark">{{ $viewedProduct->name }}</div>
+                                        <div class="text-primary fw-bold mt-2">{{ number_format($viewedProduct->price, 0, ',', '.') }}đ</div>
+                                    </div>
+                                </a>
+                            </div>
                         @endforeach
                     </div>
                 </section>
@@ -1008,6 +949,19 @@
                 const name = col.getAttribute('data-name') || '';
                 col.style.display = name.includes(q) ? '' : 'none';
             });
+        });
+
+        // LẮNG NGHE SỰ KIỆN THÊM VÀO GIỎ HÀNG QUA DATA-*
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-add-cart-action');
+            if (btn) {
+                const id = Number(btn.dataset.id);
+                const name = btn.dataset.name;
+                const price = Number(btn.dataset.price);
+                const category = btn.dataset.category;
+                const stock = Number(btn.dataset.stock);
+                addToCart(id, name, price, category, stock);
+            }
         });
 
         document.addEventListener('DOMContentLoaded', function () {

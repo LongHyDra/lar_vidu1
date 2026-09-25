@@ -3,24 +3,38 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    protected $fillable = ['category_id', 'name', 'brand', 'attributes', 'price', 'stock', 'description', 'image'];
+    protected $fillable = [
+        'category_id',
+        'name',
+        'brand',
+        'attributes',
+        'price',
+        'stock',
+        'description',
+        'image',
+    ];
 
     protected $casts = [
         'attributes' => 'array',
     ];
 
-
-    // Liên kết: Một sản phẩm thuộc về một danh mục
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    public function wishlists()
+    public function wishlists(): HasMany
     {
         return $this->hasMany(Wishlist::class);
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class);
     }
 }

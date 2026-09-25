@@ -2,19 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
 use App\Models\Category;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use App\Models\InventoryMovement;
+use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with('category')->get();
+        $products = Product::with('category')->latest()->get();
         return view('products.index', compact('products'));
     }
 
@@ -24,13 +24,15 @@ class ProductController extends Controller
         $viewed = array_values(array_unique(array_merge([$product->id], $viewed)));
         session(['recently_viewed' => array_slice($viewed, 0, 12)]);
 
-        $product->load('category');
+        $product->load(['category', 'variants']);
+
         $relatedProducts = Product::with('category')
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->latest()
             ->limit(4)
             ->get();
+
         $popularProducts = Product::with('category')
             ->leftJoin('order_items', 'products.id', '=', 'order_items.product_id')
             ->leftJoin('orders', function ($join) {
@@ -63,22 +65,30 @@ class ProductController extends Controller
             'price'       => 'required|numeric|min:0',
             'stock'       => 'required|integer|min:0',
             'description' => 'nullable|string',
+            'image_file'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'image'       => 'nullable|string',
         ]);
 
         $data = $request->only(['category_id', 'name', 'brand', 'attributes', 'price', 'stock', 'description']);
-        if (Schema::hasColumn('products', 'image')) {
+
+        // 1. Ưu tiên lưu file ảnh tải lên từ máy tính vào storage/app/public/products
+        if ($request->hasFile('image_file')) {
+            $path = $request->file('image_file')->store('products', 'public');
+            $data['image'] = '/storage/' . $path;
+        } elseif ($request->filled('image')) {
+            // 2. Dự phòng nếu người dùng nhập đường link URL ảnh trực tiếp
             $data['image'] = $request->input('image');
         }
 
         $product = Product::create($data);
+
         InventoryMovement::create([
-            'product_id' => $product->id,
-            'user_id' => Auth::id(),
-            'type' => 'in',
-            'quantity' => $product->stock,
+            'product_id'  => $product->id,
+            'user_id'     => Auth::id(),
+            'type'        => 'in',
+            'quantity'    => $product->stock,
             'stock_after' => $product->stock,
-            'note' => 'Tồn kho ban đầu khi tạo sản phẩm',
+            'note'        => 'Tồn kho ban đầu khi tạo sản phẩm',
         ]);
 
         return redirect()->route('products.index')->with('success', 'Thêm sản phẩm phụ kiện mới thành công!');
@@ -100,25 +110,37 @@ class ProductController extends Controller
             'price'       => 'required|numeric|min:0',
             'stock'       => 'required|integer|min:0',
             'description' => 'nullable|string',
+            'image_file'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'image'       => 'nullable|string',
         ]);
 
         $data = $request->only(['category_id', 'name', 'brand', 'attributes', 'price', 'stock', 'description']);
-        if (Schema::hasColumn('products', 'image')) {
+
+        // Xử lý thay thế file ảnh và dọn dẹp file cũ trên ổ cứng
+        if ($request->hasFile('image_file')) {
+            if ($product->image && str_starts_with($product->image, '/storage/')) {
+                $oldPath = str_replace('/storage/', '', $product->image);
+                Storage::disk('public')->delete($oldPath);
+            }
+            $path = $request->file('image_file')->store('products', 'public');
+            $data['image'] = '/storage/' . $path;
+        } elseif ($request->filled('image')) {
             $data['image'] = $request->input('image');
         }
 
-        $oldStock = $product->stock;
+        $oldStock = (int) $product->stock;
         $product->update($data);
-        if ((int) $product->stock !== (int) $oldStock) {
-            $difference = (int) $product->stock - (int) $oldStock;
+
+        // Theo dõi biến động kho hàng nếu số lượng bị thay đổi
+        if ((int) $product->stock !== $oldStock) {
+            $difference = (int) $product->stock - $oldStock;
             InventoryMovement::create([
-                'product_id' => $product->id,
-                'user_id' => Auth::id(),
-                'type' => $difference > 0 ? 'in' : 'out',
-                'quantity' => $difference,
+                'product_id'  => $product->id,
+                'user_id'     => Auth::id(),
+                'type'        => $difference > 0 ? 'in' : 'out',
+                'quantity'    => $difference,
                 'stock_after' => $product->stock,
-                'note' => 'Điều chỉnh tồn kho từ quản lý sản phẩm',
+                'note'        => 'Điều chỉnh tồn kho từ quản lý sản phẩm',
             ]);
         }
 
@@ -127,6 +149,12 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        // Tự động xóa file ảnh khỏi storage khi xóa sản phẩm để tránh rác ổ cứng
+        if ($product->image && str_starts_with($product->image, '/storage/')) {
+            $oldPath = str_replace('/storage/', '', $product->image);
+            Storage::disk('public')->delete($oldPath);
+        }
+
         $product->delete();
         return redirect()->route('products.index')->with('success', 'Xóa sản phẩm thành công!');
     }

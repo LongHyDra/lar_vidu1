@@ -14,16 +14,16 @@ class GHNService
 
     public function __construct()
     {
-        $this->baseUrl = config('services.ghn.base_url', 'https://dev-online-gateway.ghn.vn/shiip/public-api');
-        $this->token = config('services.ghn.token') ?? '';
-        $this->shopId = (int) config('services.ghn.shop_id', 0);
+        $this->baseUrl = config('services.ghn.base_url', env('GHN_BASE_URL', 'https://dev-online-gateway.ghn.vn/shiip/public-api'));
+        $this->token = (string) config('services.ghn.token', env('GHN_TOKEN', ''));
+        $this->shopId = (int) config('services.ghn.shop_id', env('GHN_SHOP_ID', 0));
     }
 
     protected function client()
     {
         return Http::baseUrl($this->baseUrl)
             ->withOptions([
-                'verify' => filter_var(config('services.ghn.verify_ssl', false), FILTER_VALIDATE_BOOLEAN),
+                'verify' => false, // Tắt verify SSL trên local Windows
             ])
             ->acceptJson()
             ->timeout(15)
@@ -34,13 +34,11 @@ class GHNService
             ]);
     }
 
-    // Lấy Tỉnh/Thành
     public function getProvinces(): array
     {
         return $this->get('/master-data/province');
     }
 
-    // Lấy Quận/Huyện
     public function getDistricts(int $provinceId): array
     {
         return $this->get('/master-data/district', [
@@ -48,7 +46,6 @@ class GHNService
         ]);
     }
 
-    // Lấy Phường/Xã
     public function getWards(int $districtId): array
     {
         return $this->get('/master-data/ward', [
@@ -56,7 +53,6 @@ class GHNService
         ]);
     }
 
-    // Tính phí giao hàng
     public function calculateFee(array $params): array
     {
         return $this->post('/v2/shipping-order/fee', array_merge([
@@ -64,17 +60,11 @@ class GHNService
         ], $params));
     }
 
-    // Tạo đơn giao hàng
     public function createOrder(array $orderData): array
     {
         return $this->post('/v2/shipping-order/create', array_merge([
             'shop_id' => $this->shopId,
         ], $orderData));
-    }
-
-    public function productWeight(): int
-    {
-        return 300;
     }
 
     public function packageParameters(int $weight): array
@@ -88,7 +78,6 @@ class GHNService
         ];
     }
 
-    // Hủy đơn hàng
     public function cancelOrder(array $orderCodes): array
     {
         return $this->post('/v2/switch-status/cancel', [
@@ -101,18 +90,10 @@ class GHNService
     {
         try {
             $response = $this->client()->get($uri, $query);
-            if (!$response->successful()) {
-                Log::warning('GHN GET request failed', [
-                    'uri' => $uri,
-                    'status' => $response->status(),
-                    'body' => $response->json(),
-                ]);
-                return ['code' => $response->status(), 'message' => 'GHN API request failed.'];
-            }
-            return $response->json() ?? ['code' => -1, 'message' => 'GHN returned an empty response.'];
+            return $response->json() ?? ['code' => $response->status(), 'message' => 'Lỗi kết nối GHN.'];
         } catch (ConnectionException $exception) {
-            Log::error('Unable to connect to GHN', ['uri' => $uri, 'error' => $exception->getMessage()]);
-            return ['code' => -1, 'message' => 'Unable to connect to GHN.'];
+            Log::error('GHN connection error', ['uri' => $uri, 'error' => $exception->getMessage()]);
+            return ['code' => -1, 'message' => 'Không thể kết nối đến máy chủ GHN.'];
         }
     }
 
@@ -120,18 +101,22 @@ class GHNService
     {
         try {
             $response = $this->client()->post($uri, $payload);
-            if (!$response->successful()) {
-                Log::warning('GHN POST request failed', [
+            $result = $response->json() ?? [];
+
+            // Ghi log chi tiết nếu GHN báo lỗi
+            if (!$response->successful() || (isset($result['code']) && $result['code'] != 200)) {
+                Log::warning('GHN API returned error', [
                     'uri' => $uri,
                     'status' => $response->status(),
-                    'body' => $response->json(),
+                    'payload' => $payload,
+                    'response' => $result,
                 ]);
-                return ['code' => $response->status(), 'message' => 'GHN API request failed.'];
             }
-            return $response->json() ?? ['code' => -1, 'message' => 'GHN returned an empty response.'];
+
+            return $result;
         } catch (ConnectionException $exception) {
-            Log::error('Unable to connect to GHN', ['uri' => $uri, 'error' => $exception->getMessage()]);
-            return ['code' => -1, 'message' => 'Unable to connect to GHN.'];
+            Log::error('GHN connection error', ['uri' => $uri, 'error' => $exception->getMessage()]);
+            return ['code' => -1, 'message' => 'Không thể kết nối đến máy chủ GHN.'];
         }
     }
 }

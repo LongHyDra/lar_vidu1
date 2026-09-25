@@ -543,13 +543,18 @@
 
                             <!-- VẬN ĐƠN GHN -->
                             <td>
-                                @if($order->ghn_order_code)
-                                    <span class="badge bg-light text-primary border font-monospace">{{ $order->ghn_order_code }}</span>
-                                    <div class="text-muted" style="font-size: 0.72rem;">Cước: {{ number_format($order->ghn_total_fee ?? 0, 0, ',', '.') }}₫</div>
-                                @else
-                                    <span class="text-muted small">—</span>
-                                @endif
-                            </td>
+    @if($order->ghn_order_code)
+        <span class="badge bg-light text-primary border font-monospace">{{ $order->ghn_order_code }}</span>
+        <div class="text-muted" style="font-size: 0.72rem;">Cước: {{ number_format($order->ghn_total_fee ?? 0, 0, ',', '.') }}₫</div>
+    @else
+        <form action="{{ route('admin.orders.createGhn', $order) }}" method="POST" class="m-0">
+            @csrf
+            <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2 fw-bold" style="font-size: 0.75rem;" title="Bấm để gửi thông tin sang GHN tạo mã">
+                <i class="fa-solid fa-truck-fast me-1"></i> Tạo GHN
+            </button>
+        </form>
+    @endif
+</td>
 
                             <td class="text-end fw-bold text-dark fs-6">
                                 {{ number_format($order->total_price, 0, ',', '.') }}₫

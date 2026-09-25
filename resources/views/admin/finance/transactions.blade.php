@@ -99,7 +99,6 @@
                     <th>Phương thức</th>
                     <th class="text-end">Số tiền</th>
                     <th>Thanh toán</th>
-                    <!-- CỘT CẬP NHẬT CỐ ĐỊNH -->
                     <th class="text-end" style="min-width: 220px;">Cập nhật COD</th>
                 </tr>
             </thead>
@@ -124,17 +123,10 @@
                         {{ number_format($order->total_price, 0, ',', '.') }}₫
                     </td>
                     <td>
-                        <span class="badge text-bg-{{ match($order->payment_status ?? '') {
-                            'paid', 'refunded' => 'success',
-                            'failed', 'cancelled' => 'danger',
-                            'pending', 'initiated' => 'warning',
-                            'refund_pending' => 'primary',
-                            default => 'secondary'
-                        } }} px-2 py-1">
+                        <span class="badge {{ \App\Support\PaymentStatus::badgeClass($order->payment_status ?? '') }} px-2 py-1">
                             {{ $statuses[$order->payment_status] ?? $order->payment_status }}
                         </span>
                     </td>
-                    <!-- FORM CỐ ĐỊNH TRỰC TIẾP TRÊN DÒNG (INLINE) -->
                     <td class="text-end">
                         @if($canUpdate)
                         <form method="POST" action="{{ route('admin.finance.update-status', $order->id) }}" class="d-inline-flex align-items-center justify-content-end gap-1">
@@ -151,7 +143,7 @@
                             <input type="hidden" name="current_order_status" value="{{ $order->status }}">
                             <input type="hidden" name="current_payment_id" value="{{ $order->payment_id ?? 0 }}">
                             <button type="submit" class="btn btn-primary btn-sm px-2 fw-bold" title="Lưu trạng thái">
-                                Lưu
+                                <i class="fa-solid fa-floppy-disk"></i>
                             </button>
                         </form>
                         @else
@@ -161,14 +153,15 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">Không có giao dịch nào phù hợp.</td>
+                    <td colspan="6" class="text-center text-muted py-4">Không tìm thấy giao dịch nào.</td>
                 </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
+
     @if($orders->hasPages())
-    <div class="pt-3 border-top mt-3">
+    <div class="p-3 border-top mt-2">
         {{ $orders->links() }}
     </div>
     @endif

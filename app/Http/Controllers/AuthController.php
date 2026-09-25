@@ -3,57 +3,62 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Exception;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
-use Exception;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    // Hiển thị form đăng ký
     public function showRegistrationForm()
     {
         return view('auth.register');
     }
 
-    // Xử lý đăng ký người dùng
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
         try {
             Log::info('Registering user with email: ' . $request->email);
-            User::create([
-                'name' => $request->name,
-                'email' => $request->email,
+
+            $user = User::create([
+                'name'     => $request->name,
+                'email'    => $request->email,
                 'password' => Hash::make($request->password),
-                'role' => 'customer',
+                'role'     => 'customer',
             ]);
-            Log::info('User registered successfully');
-            return redirect()->route('login')->with('success', 'Registration successful! Please login.');
+
+            event(new Registered($user));
+            Auth::login($user);
+
+            Log::info('User registered successfully, verification email dispatched');
+
+            return redirect()->route('verification.notice');
         } catch (Exception $e) {
             Log::error('Registration failed: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Registration failed. Please try again.');
+            return redirect()->back()->with('error', 'Đăng ký thất bại. Vui lòng thử lại.');
         }
     }
 
-    // Hiển thị form đăng nhập
     public function showLoginForm()
     {
         return view('auth.login');
     }
 
-    // Xử lý đăng nhập người dùng
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|string|email',
+            'email'    => 'required|string|email',
             'password' => 'required|string',
         ]);
 
@@ -65,15 +70,65 @@ class AuthController extends Controller
             return redirect()->intended(route('welcome'));
         }
 
-        return redirect()->back()->with('error', 'The provided credentials are incorrect.');
+        return redirect()->back()->with('error', 'Email hoặc mật khẩu không chính xác.');
     }
 
-    // Xử lý đăng xuất người dùng
     public function logout(Request $request)
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('login');
+
+        return redirect()->route('login')->with('info', 'Bạn đã đăng xuất thành công.');
+    }
+
+    public function showForgotPasswordForm()
+    {
+        return view('auth.forgot-password');
+    }
+
+    public function sendResetLinkEmail(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $status = Password::sendResetLink($request->only('email'));
+
+        return $status === Password::RESET_LINK_SENT
+            ? back()->with('success', 'Đường dẫn đặt lại mật khẩu đã được gửi vào hòm thư của bạn!')
+            : back()->withErrors(['email' => __($status)]);
+    }
+
+    public function showResetPasswordForm(Request $request, $token = null)
+    {
+        return view('auth.reset-password')->with([
+            'token' => $token,
+            'email' => $request->email,
+        ]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token'    => 'required',
+            'email'    => 'required|email',
+            'password' => 'required|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        return $status === Password::PASSWORD_RESET
+            ? redirect()->route('login')->with('success', 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập bằng mật khẩu mới!')
+            : back()->withErrors(['email' => __($status)]);
     }
 }

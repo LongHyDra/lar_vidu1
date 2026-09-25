@@ -6,7 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Admin\ChatController as AdminChatController;
-use App\Http\Controllers\Admin\FinanceController; // <-- THÊM DÒNG NÀY
+use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\PaymentTransactionController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
@@ -20,7 +20,10 @@ use App\Http\Controllers\User\WishlistController;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Wishlist;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
 /*
@@ -40,8 +43,23 @@ Route::prefix('locations')->name('locations.')->group(function () {
 
 Route::get('/cart', fn() => view('cart.index'))->name('cart.index');
 Route::get('/cart/index', fn() => view('cart.index'));
-Route::get('/checkout', fn() => view('checkout.index'))->name('checkout.index');
 Route::view('/faq', 'faq')->name('faq');
+
+Route::get('/products/{product}', [ProductController::class, 'show'])
+    ->name('products.show')
+    ->whereNumber('product');
+
+Route::get('/test-mail', function () {
+    try {
+        Mail::raw('Xin chào, đây là thư kiểm tra kết nối SMTP từ Phụ Kiện Xe Máy 247!', function ($message) {
+            $message->to(config('mail.from.address'))
+                    ->subject('Kiểm tra gửi mail Laravel 12');
+        });
+        return '<h3 style="color:green;">Gửi email thành công! Hãy kiểm tra hòm thư của bạn.</h3>';
+    } catch (\Exception $e) {
+        return '<h3 style="color:red;">Lỗi gửi email:</h3> ' . $e->getMessage();
+    }
+});
 
 Route::get('/', function () {
     try {
@@ -76,7 +94,8 @@ Route::get('/', function () {
             $query->where('stock', '>', 0);
         }
 
-        $products = $query->get();
+        // PHÂN TRANG 12 SẢN PHẨM TRÊN TRANG CHỦ
+        $products = $query->latest()->paginate(12)->withQueryString();
         $categories = Category::all();
     } catch (\Exception $e) {
         $products = collect();
@@ -107,6 +126,12 @@ Route::middleware('guest')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('login', [AuthController::class, 'login']);
+
+    // QUÊN VÀ ĐẶT LẠI MẬT KHẨU
+    Route::get('forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
+    Route::post('forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::get('reset-password/{token}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset');
+    Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
 
 /*
@@ -115,8 +140,29 @@ Route::middleware('guest')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-    Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+    Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
 
+    // EMAIL VERIFICATION ROUTES
+    Route::get('/email/verify', function () {
+        return view('auth.verify-email');
+    })->name('verification.notice');
+
+    Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+        $request->fulfill();
+        return redirect()->route('welcome')->with('success', 'Xác thực email thành công! Bạn có thể sử dụng đầy đủ tính năng.');
+    })->middleware('signed')->name('verification.verify');
+
+    Route::post('/email/verification-notification', function (Request $request) {
+        $request->user()->sendEmailVerificationNotification();
+        return back()->with('success', 'Đường dẫn xác thực mới đã được gửi vào hòm thư email của bạn!');
+    })->middleware('throttle:6,1')->name('verification.send');
+
+    // CHECKOUT BẮT BUỘC ĐÃ XÁC THỰC EMAIL
+    Route::get('/checkout', fn() => view('checkout.index'))
+        ->middleware('verified')
+        ->name('checkout.index');
+
+    // USER ROUTES
     Route::prefix('user')->name('user.')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -160,17 +206,18 @@ Route::middleware('auth')->group(function () {
         Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     });
 
-    // Khu vực Quản trị Admin
+    // KHU VỰC QUẢN TRỊ ADMIN
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::post('/orders/{order}/status', [AdminController::class, 'updateOrderStatus'])->name('orders.updateStatus');
+        Route::post('/orders/{order}/create-ghn', [AdminController::class, 'createGhnOrder'])->name('orders.createGhn');
 
         // Báo cáo doanh thu
         Route::get('/reports/revenue.csv', [AdminController::class, 'exportRevenueCsv'])->name('reports.revenue.csv');
         Route::get('/reports/revenue/excel', [AdminController::class, 'exportRevenueExcel'])->name('reports.revenue.excel');
         Route::get('/reports/revenue/print', [AdminController::class, 'printRevenueReport'])->name('reports.revenue.print');
 
-        // MODULE THỐNG KÊ TÀI CHÍNH & GIAO DỊCH (LAB 9)
+        // Module Thống kê Tài chính
         Route::prefix('finance')->name('finance.')->group(function () {
             Route::get('/', [FinanceController::class, 'index'])->name('index');
             Route::get('/transactions', [FinanceController::class, 'transactions'])->name('transactions');
@@ -193,7 +240,3 @@ Route::middleware('auth')->group(function () {
         Route::post('/chat/send', [AdminChatController::class, 'send'])->name('chat.send');
     });
 });
-
-Route::get('/products/{product}', [ProductController::class, 'show'])
-    ->name('products.show')
-    ->whereNumber('product');

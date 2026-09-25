@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Services\GHNOrderService;
@@ -19,9 +20,8 @@ class MomoController extends Controller
         if ($order->user_id !== Auth::id()) {
             abort(403);
         }
-
         if ($order->status === 'paid' || $order->ghn_order_code) {
-            return redirect()->route('user.orders.index')->with('info', 'Đơn hàng này đã được thanh toán.');
+            return redirect()->route('user.orders.index')->with('info', 'Đơn hàng đã được thanh toán.');
         }
 
         return $this->redirectToMomo($order, $this->newTransaction($order), $momo);
@@ -32,9 +32,8 @@ class MomoController extends Controller
         if ($order->user_id !== Auth::id()) {
             abort(403);
         }
-
         if ($order->status === 'paid' || $order->ghn_order_code) {
-            return redirect()->route('user.orders.index')->with('info', 'Đơn hàng này đã được thanh toán.');
+            return redirect()->route('user.orders.index')->with('info', 'Đơn hàng đã được thanh toán.');
         }
 
         return $this->redirectToMomo($order, $this->newTransaction($order), $momo);
@@ -43,28 +42,21 @@ class MomoController extends Controller
     public function callback(Request $request, GHNOrderService $ghnOrders, MomoService $momo)
     {
         Log::info('MoMo callback received', [
-            'payload' => $request->except('signature'),
+            'payload'       => $request->except('signature'),
             'has_signature' => $request->has('signature'),
         ]);
 
         if (!$momo->isValidSuccessfulResponse($request->all())) {
-            Log::warning('MoMo callback rejected', [
-                'result_code' => $request->input('resultCode'),
-                'order_id' => $request->input('orderId'),
-                'signature_valid' => $momo->isValidResponse($request->all()),
-            ]);
-
             if ($momo->isValidResponse($request->all())) {
                 $this->markFailed($request->all(), $momo);
             }
-
-            return redirect()->route('user.orders.index')->with('error', 'Giao dịch MoMo thất bại.');
+            return redirect()->route('user.orders.index')->with('error', 'Giao dịch MoMo không thành công hoặc bị hủy.');
         }
 
         $result = $this->completePayment($request->all(), $ghnOrders, $momo);
         $message = in_array($result, ['created', 'already_created'], true)
             ? 'Thanh toán MoMo thành công! Vận đơn GHN đã được khởi tạo.'
-            : 'Thanh toán thành công! Đơn hàng đang chờ tạo vận đơn GHN.';
+            : 'Thanh toán thành công! Đơn hàng đang chờ điều phối giao vận.';
 
         return redirect()->route('user.orders.index')->with('success', $message);
     }
@@ -72,7 +64,7 @@ class MomoController extends Controller
     public function ipn(Request $request, GHNOrderService $ghnOrders, MomoService $momo)
     {
         Log::info('MoMo IPN received', [
-            'payload' => $request->except('signature'),
+            'payload'       => $request->except('signature'),
             'has_signature' => $request->has('signature'),
         ]);
 
@@ -89,16 +81,16 @@ class MomoController extends Controller
     {
         return PaymentTransaction::create([
             'order_id' => $order->id,
-            'gateway' => 'momo',
-            'amount' => $order->total_price,
-            'status' => 'pending',
+            'gateway'  => 'momo',
+            'amount'   => $order->total_price,
+            'status'   => 'pending',
         ]);
     }
 
     private function redirectToMomo(Order $order, PaymentTransaction $transaction, MomoService $momo)
     {
         $result = $momo->createPayment($order, $transaction);
-        
+
         if (isset($result['payUrl'])) {
             return redirect($result['payUrl']);
         }
@@ -110,6 +102,7 @@ class MomoController extends Controller
     private function completePayment(array $payload, GHNOrderService $ghnOrders, MomoService $momo): string
     {
         $result = DB::transaction(function () use ($payload, $momo) {
+            /** @var PaymentTransaction|null $transaction */
             $transaction = PaymentTransaction::where('gateway', 'momo')
                 ->where('gateway_order_id', $payload['orderId'] ?? '')
                 ->lockForUpdate()
@@ -119,8 +112,8 @@ class MomoController extends Controller
                 return 'invalid';
             }
 
-            $order = Order::lockForUpdate()->find($transaction->order_id);
-
+            /** @var Order|null $order */
+            $order = Order::with('items.product')->lockForUpdate()->find($transaction->order_id);
             if (!$order) {
                 return 'invalid';
             }
@@ -129,13 +122,24 @@ class MomoController extends Controller
                 return 'already_created';
             }
 
-            if ($order->shipping_status === 'processing') {
-                return 'processing';
-            }
-
             if ((int) $transaction->amount !== (int) ($payload['amount'] ?? 0)) {
                 $momo->markFailed($transaction, $payload);
                 return 'invalid';
+            }
+
+            // Trừ tồn kho thực tế khi thanh toán hoàn tất
+            foreach ($order->items as $item) {
+                if ($item->product) {
+                    $item->product->decrement('stock', $item->quantity);
+                    InventoryMovement::create([
+                        'product_id'  => $item->product->id,
+                        'user_id'     => $order->user_id,
+                        'type'        => 'out',
+                        'quantity'    => -$item->quantity,
+                        'stock_after' => $item->product->fresh()->stock,
+                        'note'        => "Trừ kho sau khi thanh toán MoMo thành công đơn #{$order->id}",
+                    ]);
+                }
             }
 
             $order->update(['status' => 'paid', 'shipping_status' => 'processing']);
@@ -148,6 +152,7 @@ class MomoController extends Controller
             return (string) $result;
         }
 
+        /** @var Order|null $order */
         $order = Order::with('items.product')->find($result[1]);
         if (!$order) {
             return 'invalid';
@@ -156,10 +161,9 @@ class MomoController extends Controller
         $response = $ghnOrders->create($order, true);
         if (isset($response['code']) && (int) $response['code'] === 200) {
             $order->update([
-                'ghn_order_code' => $response['data']['order_code'],
+                'ghn_order_code'  => $response['data']['order_code'],
                 'shipping_status' => 'ready_to_pick',
             ]);
-
             return 'created';
         }
 
@@ -169,12 +173,12 @@ class MomoController extends Controller
         ]);
 
         $order->update(['shipping_status' => 'pending']);
-
         return 'failed';
     }
 
     private function markFailed(array $payload, MomoService $momo): void
     {
+        /** @var PaymentTransaction|null $transaction */
         $transaction = PaymentTransaction::where('gateway', 'momo')
             ->where('gateway_order_id', $payload['orderId'] ?? '')
             ->first();
