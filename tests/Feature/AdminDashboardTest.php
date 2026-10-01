@@ -40,6 +40,9 @@ class AdminDashboardTest extends TestCase
             'quantity' => 2,
             'price' => 100000,
         ]);
+        $activeOrder->paymentTransactions()->create([
+            'gateway' => 'cod', 'amount' => 200000, 'status' => 'paid',
+        ]);
 
         $cancelledOrder = Order::create([
             'user_id' => $customer->id,

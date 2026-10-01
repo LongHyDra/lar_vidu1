@@ -1,0 +1,5 @@
+@extends('layouts.admin')
+@section('title', 'Đánh giá sản phẩm')
+@section('content')
+<div class="card-panel"><div class="card-panel-title"><i class="fa-solid fa-star text-warning"></i> Duyệt đánh giá sản phẩm</div><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Sản phẩm</th><th>Khách hàng</th><th>Điểm</th><th>Nội dung</th><th>Trạng thái</th><th></th></tr></thead><tbody>@forelse($reviews as $review)<tr><td>{{ $review->product->name }}</td><td>{{ $review->user->name }}</td><td>{{ str_repeat('★', $review->rating) }}</td><td>{{ Illuminate\Support\Str::limit($review->body, 70) }}</td><td>{{ $review->status }}</td><td><form method="POST" action="{{ route('admin.reviews.update', $review) }}" class="d-flex gap-1">@csrf @method('PATCH')<select name="status" class="form-select form-select-sm"><option value="approved">Duyệt</option><option value="rejected">Từ chối</option></select><button class="btn btn-sm btn-primary">Lưu</button></form></td></tr>@empty<tr><td colspan="6" class="text-muted">Chưa có đánh giá.</td></tr>@endforelse</tbody></table></div>{{ $reviews->links() }}</div>
+@endsection

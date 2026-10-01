@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderStatusHistory;
+use App\Models\AdminAudit;
 use App\Models\PaymentTransaction;
 use App\Support\PaymentStatus;
 use Carbon\Carbon;
@@ -239,9 +241,63 @@ class FinanceController extends Controller
             } elseif (in_array($newStatus, ['pending', 'failed'], true)) {
                 $lockedOrder->update(['status' => 'cod_ordered']);
             }
+            AdminAudit::record('payment.cod_status_updated', $lockedOrder, ['from' => $currentStatus, 'to' => $newStatus]);
         });
 
         return back()->with('success', 'Đã lưu trạng thái thanh toán COD #' . $order->id . '.');
+    }
+
+    public function updateRefund(Request $request, Order $order)
+    {
+        $data = $request->validate([
+            'payment_status' => ['required', Rule::in([PaymentStatus::REFUND_PENDING, PaymentStatus::REFUNDED])],
+            'current_payment_status' => ['required', 'string'],
+            'current_payment_id' => ['required', 'integer', 'min:1'],
+        ]);
+
+        DB::transaction(function () use ($order, $data, $request) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $payment = $lockedOrder->paymentTransactions()
+                ->orderByRaw(PaymentStatus::SELECTION_PRIORITY)
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $payment || $payment->gateway !== 'momo') {
+                throw ValidationException::withMessages(['payment_status' => 'Chỉ xử lý hoàn tiền thủ công cho giao dịch MoMo.']);
+            }
+
+            if ((int) $payment->id !== (int) $data['current_payment_id'] || $payment->status !== $data['current_payment_status']) {
+                throw ValidationException::withMessages(['payment_status' => 'Dữ liệu giao dịch vừa thay đổi. Vui lòng tải lại trang.']);
+            }
+
+            if (! PaymentStatus::canTransitionTo($payment->status, $data['payment_status'])) {
+                throw ValidationException::withMessages(['payment_status' => 'Không thể chuyển sang trạng thái hoàn tiền này.']);
+            }
+
+            $payment->update([
+                'status' => $data['payment_status'],
+                'message' => 'Quản trị viên #' . $request->user()->id . ' cập nhật: ' . PaymentStatus::label($data['payment_status']),
+            ]);
+
+            if ($data['payment_status'] === PaymentStatus::REFUNDED
+                && in_array($lockedOrder->shipping_status, ['payment_review', 'pending', 'not_shipped', 'cancelled'], true)) {
+                $lockedOrder->update([
+                    'status' => 'cancelled',
+                    'shipping_status' => 'cancelled',
+                ]);
+            }
+
+            OrderStatusHistory::create([
+                'order_id' => $lockedOrder->id,
+                'status' => $lockedOrder->fresh()->status,
+                'note' => 'Quản trị viên xác nhận ' . PaymentStatus::label($data['payment_status']) . ' cho giao dịch MoMo.',
+                'changed_by' => $request->user()->id,
+            ]);
+            AdminAudit::record('payment.refund_status_updated', $lockedOrder, ['from' => $data['current_payment_status'], 'to' => $data['payment_status']]);
+        });
+
+        return back()->with('success', 'Đã cập nhật quy trình hoàn tiền MoMo cho đơn #' . $order->id . '.');
     }
 
     private function methods(): array

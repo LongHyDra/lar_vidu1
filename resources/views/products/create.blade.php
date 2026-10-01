@@ -26,21 +26,15 @@
         .req { color: #e11d48; }
         .btn-save { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; padding: 10px 24px; border-radius: 10px; font-weight: 700; border: none; cursor: pointer; }
     </style>
-</head>
-<body>
 
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <div class="brand-icon-wrap"><div class="brand-icon-inner"><i class="fa-solid fa-motorcycle"></i></div></div>
-        <div class="fw-bold fs-6 ms-2">PHỤ KIỆN XE MÁY 247</div>
-    </div>
-    <div class="sidebar-nav">
-        <div class="nav-label">Quản lý</div>
-        <a href="{{ route('categories.index') }}" class="nav-link-item"><i class="fa-solid fa-tags me-2"></i> Danh Mục Phụ Kiện</a>
-        <a href="{{ route('products.index') }}" class="nav-link-item active"><i class="fa-solid fa-box me-2"></i> Sản Phẩm Phụ Kiện</a>
-        <a href="{{ route('admin.dashboard') }}" class="nav-link-item"><i class="fa-solid fa-chart-line me-2"></i> Bảng Điều Khiển</a>
-    </div>
-</div>
+    @stack('styles')
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/account-admin.css') }}">
+    <script src="{{ asset('js/account-admin.js') }}" defer></script>
+</head>
+<body class="admin-theme">
+
+@include('partials.admin-navigation')
 
 <div class="main-content">
     <div class="form-card">

@@ -40,6 +40,7 @@ return [
         'token' => env('GHN_TOKEN'),
         'shop_id' => env('GHN_SHOP_ID'),
         'verify_ssl' => env('GHN_VERIFY_SSL', true),
+        'webhook_token' => env('GHN_WEBHOOK_TOKEN'),
         'from_district_id' => env('GHN_FROM_DISTRICT_ID'),
     ],
 
@@ -48,7 +49,7 @@ return [
         'partner_code' => env('MOMO_PARTNER_CODE', 'MOMOBKUN20180529'),
         'access_key' => env('MOMO_ACCESS_KEY', 'klm05TvNBzhg7h7j'),
         'secret_key' => env('MOMO_SECRET_KEY', 'at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa'),
-        'verify_ssl' => env('MOMO_VERIFY_SSL', false),
+        'verify_ssl' => env('MOMO_VERIFY_SSL', true),
         'redirect_url' => env('MOMO_REDIRECT_URL'),
         'ipn_url' => env('MOMO_IPN_URL'),
     ],

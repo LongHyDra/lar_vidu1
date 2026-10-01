@@ -96,7 +96,8 @@ class ChatFeatureTest extends TestCase
             'address' => '123 Đường Test',
             'phone' => '0901234567',
             'total_price' => 1500000,
-            'status' => 'pending',
+            'status' => 'cod_ordered',
+            'stock_deducted' => true,
             'shipping_status' => 'pending',
         ]);
         OrderItem::create([

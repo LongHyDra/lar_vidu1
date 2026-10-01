@@ -1,11 +1,8 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý đơn hàng</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
+@extends('layouts.admin')
+@section('title', 'Quản lý đơn hàng')
+@section('page_title', 'Quản lý đơn hàng')
+@push('styles')
+<style>
         body { background: #f8fafc; font-family: Arial, sans-serif; }
         .container { max-width: 1200px; margin: 40px auto; }
         .card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
@@ -20,8 +17,9 @@
         select { min-width: 180px; }
         .alert { margin-bottom: 16px; }
     </style>
-</head>
-<body>
+@endpush
+
+@section('content')
 <div class="container">
     <div class="card">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -82,5 +80,4 @@
         </div>
     </div>
 </div>
-</body>
-</html>
+@endsection

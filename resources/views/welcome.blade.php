@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Phụ kiện và đồ chơi xe máy chính hãng, giao hàng toàn quốc tại Phụ Kiện Xe Máy 247.">
+    <link rel="canonical" href="{{ url('/') }}">
     <title>Phụ Kiện Xe Máy 247 | Cửa Hàng Đồ Chơi & Phụ Tùng Xe Máy Chính Hãng</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -488,8 +490,9 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
 </head>
-<body>
+<body><a class="skip-link" href="#catalog">Đến danh sách sản phẩm</a>
 
     <!-- TOP BAR -->
     <div class="top-bar">
@@ -592,33 +595,47 @@
                 </div>
             </div>
         </div>
+        <div class="container">
+            <nav class="store-nav" aria-label="Điều hướng cửa hàng">
+                <span class="nav-label"><i class="fa-solid fa-bars me-2" aria-hidden="true"></i> KHÁM PHÁ 247</span>
+                <a href="#catalog">Tất cả sản phẩm</a>
+                <a href="{{ route('user.orders.index') }}">Đơn hàng của tôi</a>
+                <a href="{{ route('faq') }}">Hướng dẫn mua hàng</a>
+                <a href="{{ route('user.tickets.index') }}">Liên hệ hỗ trợ</a>
+            </nav>
+        </div>
     </header>
 
-    <!-- PROMO HERO BANNER -->
-    <section class="py-4 bg-white border-bottom mb-4">
-        <div class="container">
-            <div class="p-4 p-md-5 rounded-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
-                <div class="row align-items-center">
-                    <div class="col-lg-8">
-                        <span class="badge bg-warning text-dark fw-extrabold px-3 py-2 rounded-pill mb-3 fs-6">
-                            <i class="fa-solid fa-star me-1"></i> CAM KẾT CHÍNH HÃNG 100%
-                        </span>
-                        <h1 class="fw-extrabold display-6 mb-3">Phụ Tùng &amp; Đồ Chơi Xe Máy Cao Cấp</h1>
-                        <p class="text-slate-300 fs-6 mb-4">Trang bị heo dầu Brembo, phuộc Ohlins, đèn bi cầu LED, pô Akrapovic, nhông sên dĩa DID chính hãng. Chọn giỏ hàng và thanh toán trực tiếp cực kỳ dễ dàng.</p>
-                        
-                        <div class="d-flex flex-wrap gap-2">
-                            <a href="#productContainer" class="btn btn-primary btn-lg fw-bold px-4 py-2 rounded-3 me-2">
-                                <i class="fa-solid fa-shop me-2"></i> Mua sắm ngay
-                            </a>
-                            <a href="{{ route('cart.index') }}" class="btn btn-outline-light btn-lg fw-bold px-4 py-2 rounded-3">
-                                <i class="fa-solid fa-cart-shopping me-2"></i> Xem giỏ hàng
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 d-none d-lg-block text-center">
-                        <i class="fa-solid fa-motorcycle text-white-50" style="font-size: 9rem;"></i>
-                    </div>
+    <section class="container ride-hero" aria-labelledby="hero-title">
+        <div class="ride-hero-inner">
+            <div class="ride-copy">
+                <span class="eyebrow">Phụ kiện xe máy / Phong cách của bạn</span>
+                <h1 id="hero-title">Nâng chất xe.<br><em>Đậm chất bạn.</em></h1>
+                <p>Từ những chi tiết nhỏ đến trải nghiệm khác biệt. Khám phá phụ tùng và phụ kiện cho hành trình mang dấu ấn riêng.</p>
+                <div class="ride-actions">
+                    <a href="#catalog" class="btn">Khám phá sản phẩm <i class="fa-solid fa-arrow-right ms-2" aria-hidden="true"></i></a>
+                    <a href="{{ route('faq') }}">Tư vấn mua hàng</a>
                 </div>
+            </div>
+            <div class="ride-visual">
+                @php
+                    $featuredProduct = $products->first();
+                @endphp
+                @if($featuredProduct)
+                    <a class="hero-feature" href="{{ route('products.show', $featuredProduct) }}">
+                        <small>Khám phá tại 247</small>
+                        @if($featuredProduct->image)
+                            <img src="{{ asset($featuredProduct->image) }}" alt="{{ $featuredProduct->name }}">
+                        @else
+                            <div class="hero-placeholder"><i class="fa-solid fa-motorcycle" aria-hidden="true"></i></div>
+                        @endif
+                        <strong>{{ $featuredProduct->name }}</strong>
+                        <div class="feature-bottom"><span>{{ number_format($featuredProduct->price, 0, ',', '.') }}₫</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></div>
+                    </a>
+                @else
+                    <div class="hero-feature"><small>Phụ kiện xe máy 247</small><div class="hero-placeholder"><i class="fa-solid fa-motorcycle" aria-hidden="true"></i></div><strong>Sẵn sàng cho hành trình mới.</strong></div>
+                @endif
+                <span class="hero-caption">YOUR RIDE. YOUR STYLE.</span>
             </div>
         </div>
     </section>
@@ -632,17 +649,17 @@
             <div class="benefit-grid">
                 <div class="benefit-card">
                     <i class="fa-solid fa-shield-halved"></i>
-                    <strong>100% chính hãng</strong>
-                    <span>Sản phẩm được chọn lọc kỹ lưỡng, nguồn gốc rõ ràng, bảo hành đúng tiêu chuẩn.</span>
+                    <strong>Thông tin rõ ràng</strong>
+                    <span>Xem thông số, giá và tình trạng hàng trước khi lựa chọn.</span>
                 </div>
                 <div class="benefit-card">
                     <i class="fa-solid fa-truck-fast"></i>
                     <strong>Giao hàng nhanh</strong>
-                    <span>Vận chuyển siêu tốc trong nội thành và hỗ trợ giao hàng toàn quốc.</span>
+                    <span>Giao hàng qua GHN, phí vận chuyển hiển thị khi đặt hàng.</span>
                 </div>
                 <div class="benefit-card">
                     <i class="fa-solid fa-headset"></i>
-                    <strong>Hỗ trợ 24/7</strong>
+                    <strong>Tư vấn lựa chọn</strong>
                     <span>Đội ngũ tư vấn chuyên nghiệp, phản hồi nhanh qua chat và hotline.</span>
                 </div>
                 <div class="benefit-card">
@@ -655,7 +672,11 @@
     </section>
 
     <!-- STOREFRONT MAIN CONTENT -->
-    <main class="container">
+    <main class="container" id="catalog">
+        <div class="catalog-heading">
+            <div><span class="eyebrow">Trang bị cho hành trình</span><h2>Chọn chất riêng cho xe.</h2></div>
+            <p>Tìm phụ kiện phù hợp, theo cách của bạn.</p>
+        </div>
         <!-- CATEGORIES FILTER CHIPS -->
         <div class="mb-4">
             <div class="d-flex align-items-center justify-content-between mb-3">
@@ -665,7 +686,7 @@
                 </a>
             </div>
 
-            <form action="{{ route('welcome') }}" method="GET" class="row g-2 align-items-end mb-3">
+            <form action="{{ route('welcome') }}" method="GET" class="row g-2 align-items-end mb-3 catalog-filter">
                 <div class="col-12 col-md-4">
                     <label class="form-label small fw-bold mb-1" for="filter-q">Từ khóa</label>
                     <input id="filter-q" name="q" value="{{ request('q') }}" class="form-control" placeholder="Tên sản phẩm hoặc danh mục">
@@ -712,7 +733,7 @@
         <!-- PRODUCT GRID -->
         <div class="row g-4" id="productContainer">
             @forelse($products as $product)
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3 prod-col cat-{{ $product->category_id }}" data-name="{{ strtolower($product->name) }}">
+                <div class="col-6 col-md-4 col-lg-3 prod-col cat-{{ $product->category_id }}" data-name="{{ strtolower($product->name) }}">
                     <div class="product-card">
                         <div class="product-thumb">
                             <span class="cat-tag">{{ $product->category->name ?? 'Phụ kiện' }}</span>
@@ -761,9 +782,9 @@
                                 data-name="{{ $product->name }}"
                                 data-price="{{ $product->price }}"
                                 data-category="{{ $product->category->name ?? 'Phụ kiện' }}"
-                                data-stock="{{ $product->stock }}">
+                                data-stock="{{ $product->stock }}" @disabled($product->stock <= 0)>
                                 <i class="fa-solid fa-cart-plus fs-6"></i>
-                                THÊM VÀO GIỎ HÀNG
+                                {{ $product->stock > 0 ? 'Thêm vào giỏ' : 'Tạm hết hàng' }}
                             </button>
                         </div>
                     </div>
@@ -775,6 +796,9 @@
             @endforelse
         </div>
 
+        @if($products instanceof \Illuminate\Contracts\Pagination\Paginator)
+            <div class="d-flex justify-content-center mt-4">{{ $products->links('pagination::bootstrap-5') }}</div>
+        @endif
         @auth
             @if($recentlyViewed->isNotEmpty())
                 <section class="mt-5 mb-4">
@@ -869,13 +893,8 @@
     @endauth
 
     <!-- FOOTER -->
-    <footer class="site-footer">
-        <div class="container text-center">
-            <div class="fw-extrabold text-dark fs-5 mb-1"><i class="fa-solid fa-motorcycle text-primary me-2"></i>PHỤ KIỆN XE MÁY 247</div>
-            <div>Hệ thống đồ chơi &amp; phụ tùng xe máy hàng đầu Việt Nam.</div>
-            <div class="mt-2 text-muted small">&copy; {{ date('Y') }} All rights reserved.</div>
-        </div>
-    </footer>
+    @include('partials.store-footer')
+
 
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -898,6 +917,7 @@
         }
 
         function addToCart(id, name, price, category, stock) {
+            if (stock <= 0) return;
             let cart = getCart();
             let item = cart.find(i => i.id === id);
 

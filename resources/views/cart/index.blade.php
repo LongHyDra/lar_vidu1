@@ -265,6 +265,7 @@
             text-align: center;
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
 </head>
 <body>
 
@@ -284,7 +285,7 @@
     </header>
 
     <!-- MAIN CONTAINER -->
-    <main class="container flex-grow-1">
+    <main class="container flex-grow-1"><div class="page-intro"><span class="eyebrow">Hành trình mua sắm</span><h1>Giỏ hàng của bạn.</h1><p>Kiểm tra lựa chọn, sẵn sàng nâng cấp chiếc xe.</p></div>
 
         <!-- STEP PROCESS -->
         <div class="step-bar">
@@ -354,13 +355,13 @@
                     </div>
                     <div class="d-flex justify-content-between mb-3 text-secondary">
                         <span>Phí vận chuyển:</span>
-                        <span class="text-success fw-bold"><i class="fa-solid fa-truck-fast me-1"></i> Miễn phí</span>
+                        <span class="text-muted small">Tính khi thanh toán</span>
                     </div>
 
                     <hr class="my-3">
 
                     <div class="d-flex justify-content-between align-items-center mb-4">
-                        <span class="fw-bold fs-6">Tổng thanh toán:</span>
+                        <span class="fw-bold fs-6">Tạm tính:</span>
                         <span class="fw-extrabold text-primary fs-4" id="summaryTotal">0₫</span>
                     </div>
 
@@ -406,6 +407,8 @@
             renderCart();
         }
 
+        function sameItem(item, id, variantId) { return Number(item.id) === Number(id) && Number(item.variant_id || 0) === Number(variantId || 0); }
+
         function renderCart() {
             const cart = getCart();
             const tbody = document.getElementById('cartTableBody');
@@ -439,23 +442,23 @@
                 html += `
                     <tr>
                         <td class="text-center">
-                            <input type="checkbox" class="form-check-input checkbox-custom" ${isChecked ? 'checked' : ''} onchange="toggleItem(${item.id}, this.checked)">
+                            <input type="checkbox" class="form-check-input checkbox-custom" ${isChecked ? 'checked' : ''} onchange="toggleItem(${item.id}, ${item.variant_id || 0}, this.checked)">
                         </td>
                         <td>
-                            <div class="item-title">${escapeHtml(item.name)}</div>
+                            <div class="item-title">${escapeHtml(item.name)}${item.variant_name ? ` <small>(${escapeHtml(item.variant_name)})</small>` : ''}</div>
                             <span class="item-cat">${escapeHtml(item.category || 'Phụ kiện')}</span>
                         </td>
                         <td class="text-end fw-bold">${formatMoney(item.price)}₫</td>
                         <td class="text-center">
                             <div class="qty-control">
-                                <button type="button" onclick="updateQty(${item.id}, -1)">-</button>
+                                <button type="button" onclick="updateQty(${item.id}, ${item.variant_id || 0}, -1)">-</button>
                                 <input type="text" value="${item.quantity}" readonly>
-                                <button type="button" onclick="updateQty(${item.id}, 1)">+</button>
+                                <button type="button" onclick="updateQty(${item.id}, ${item.variant_id || 0}, 1)">+</button>
                             </div>
                         </td>
                         <td class="text-end fw-extrabold text-primary">${formatMoney(subtotal)}₫</td>
                         <td class="text-center">
-                            <button type="button" class="btn-delete-item" onclick="removeItem(${item.id})" title="Xóa món này"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" class="btn-delete-item" onclick="removeItem(${item.id}, ${item.variant_id || 0})" title="Xóa món này"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
@@ -469,9 +472,9 @@
             document.getElementById('summaryTotal').textContent = formatMoney(totalMoney) + '₫';
         }
 
-        function toggleItem(id, isChecked) {
+        function toggleItem(id, variantId, isChecked) {
             let cart = getCart();
-            let item = cart.find(i => i.id === id);
+            let item = cart.find(i => sameItem(i, id, variantId));
             if (item) {
                 item.checked = isChecked;
                 saveCart(cart);
@@ -484,12 +487,12 @@
             saveCart(cart);
         }
 
-        function updateQty(id, delta) {
+        function updateQty(id, variantId, delta) {
             let cart = getCart();
-            let item = cart.find(i => i.id === id);
+            let item = cart.find(i => sameItem(i, id, variantId));
             if (item) {
                 let n = item.quantity + delta;
-                if (n <= 0) return removeItem(id);
+                if (n <= 0) return removeItem(id, variantId);
                 if (item.stock && n > item.stock) {
                     Swal.fire('Thông báo', `Kho hàng chỉ còn ${item.stock} sản phẩm.`, 'info');
                     return;
@@ -499,7 +502,7 @@
             }
         }
 
-        function removeItem(id) {
+        function removeItem(id, variantId) {
             Swal.fire({
                 title: 'Xóa sản phẩm?',
                 text: 'Bạn có chắc chắn muốn bỏ sản phẩm này ra khỏi giỏ hàng?',
@@ -511,7 +514,7 @@
                 cancelButtonText: 'Hủy'
             }).then((res) => {
                 if (res.isConfirmed) {
-                    let cart = getCart().filter(i => i.id !== id);
+                    let cart = getCart().filter(i => !sameItem(i, id, variantId));
                     saveCart(cart);
                 }
             });

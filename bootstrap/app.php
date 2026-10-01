@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Loại trừ CSRF cho MoMo IPN
         $middleware->validateCsrfTokens(except: [
             'payment/momo/ipn',
+            'shipping/ghn/webhook/*',
         ]);
 
         // Đăng ký Alias cho Route Middleware

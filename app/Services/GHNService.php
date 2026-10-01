@@ -23,7 +23,7 @@ class GHNService
     {
         return Http::baseUrl($this->baseUrl)
             ->withOptions([
-                'verify' => false, // Tắt verify SSL trên local Windows
+                'verify' => config('services.ghn.verify_ssl', true),
             ])
             ->acceptJson()
             ->timeout(15)

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -24,16 +25,12 @@ class ProductController extends Controller
         $viewed = array_values(array_unique(array_merge([$product->id], $viewed)));
         session(['recently_viewed' => array_slice($viewed, 0, 12)]);
 
-        $product->load(['category', 'variants']);
+        $product->load(['category', 'variants', 'reviews.user']);
 
-        $relatedProducts = Product::with('category')
-            ->where('category_id', $product->category_id)
-            ->where('id', '!=', $product->id)
-            ->latest()
-            ->limit(4)
-            ->get();
+        $relatedProducts = Cache::remember('product.related.'.$product->id, now()->addMinutes(10), fn () => Product::with('category')
+            ->where('category_id', $product->category_id)->where('id', '!=', $product->id)->latest()->limit(4)->get());
 
-        $popularProducts = Product::with('category')
+        $popularProducts = Cache::remember('product.popular.'.$product->id, now()->addMinutes(10), fn () => Product::with('category')
             ->leftJoin('order_items', 'products.id', '=', 'order_items.product_id')
             ->leftJoin('orders', function ($join) {
                 $join->on('order_items.order_id', '=', 'orders.id')
@@ -44,7 +41,7 @@ class ProductController extends Controller
             ->groupBy('products.id')
             ->orderByDesc('sold_quantity')
             ->limit(4)
-            ->get();
+            ->get());
 
         return view('products.show', compact('product', 'relatedProducts', 'popularProducts'));
     }

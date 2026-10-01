@@ -385,54 +385,16 @@
             color: #94a3b8;
         }
     </style>
+
+    @stack('styles')
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/account-admin.css') }}">
+    <script src="{{ asset('js/account-admin.js') }}" defer></script>
 </head>
-<body>
+<body class="admin-theme">
 
 <!-- ===== SIDEBAR ===== -->
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <div class="brand-icon-wrap">
-            <div class="brand-icon-glow"></div>
-            <div class="brand-icon-inner"><i class="fa-solid fa-motorcycle"></i></div>
-        </div>
-        <div>
-            <div class="brand-text">PHỤ KIỆN XE MÁY <span class="badge-247-sm">247</span></div>
-            <div class="brand-sub">Hệ thống đồ chơi chính hãng</div>
-        </div>
-    </div>
-
-    <div class="sidebar-nav">
-        <div class="nav-label">Cửa Hàng</div>
-        <a href="{{ route('welcome') }}" class="nav-item-link">
-            <div class="nav-icon"><i class="fa-solid fa-store"></i></div>
-            Trang Chủ Cửa Hàng
-        </a>
-        <a href="{{ route('cart.index') }}" class="nav-item-link">
-            <div class="nav-icon"><i class="fa-solid fa-cart-shopping"></i></div>
-            Giỏ Hàng
-        </a>
-
-        <div class="nav-label" style="margin-top: 15px;">Quản lý</div>
-        <a href="{{ route('categories.index') }}" class="nav-item-link active">
-            <div class="nav-icon"><i class="fa-solid fa-tags"></i></div>
-            Danh Mục Phụ Kiện
-        </a>
-        <a href="{{ route('products.index') }}" class="nav-item-link">
-            <div class="nav-icon"><i class="fa-solid fa-box"></i></div>
-            Sản Phẩm Phụ Kiện
-        </a>
-        
-        @auth
-            @if(Auth::user()->isAdmin())
-                <div class="nav-label" style="margin-top: 20px;">Admin</div>
-                <a href="{{ route('admin.dashboard') }}" class="nav-item-link">
-                    <div class="nav-icon"><i class="fa-solid fa-chart-line"></i></div>
-                    Bảng Điều Khiển
-                </a>
-            @endif
-        @endauth
-    </div>
-</div>
+@include('partials.admin-navigation')
 
 <!-- ===== MAIN CONTENT ===== -->
 <div class="main-content">

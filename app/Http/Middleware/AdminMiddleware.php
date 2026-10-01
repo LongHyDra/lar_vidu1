@@ -16,7 +16,13 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && Auth::user()->role === 'admin') {
+        $role = Auth::user()?->role;
+        $path = $request->path();
+        $allowed = $role === 'admin'
+            || ($role === 'manager' && (str_starts_with($path, 'admin/orders') || str_starts_with($path, 'admin/inventory') || str_starts_with($path, 'admin/finance') || str_starts_with($path, 'admin/products')))
+            || ($role === 'editor' && (str_starts_with($path, 'admin/tickets') || str_starts_with($path, 'admin/reviews') || str_starts_with($path, 'admin/products')));
+
+        if (Auth::check() && $allowed) {
             return $next($request);
         }
 

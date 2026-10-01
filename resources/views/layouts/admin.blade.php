@@ -116,93 +116,35 @@
             border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         }
     </style>
+
+    @stack('styles')
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/account-admin.css') }}">
+    <script src="{{ asset('js/account-admin.js') }}" defer></script>
 </head>
 
-<body>
+<body class="admin-theme">
     <!-- SIDEBAR MÀU TRẮNG -->
-    <div class="sidebar">
-        <div class="sidebar-brand">
-            <div class="brand-icon-wrap">
-                <div class="brand-icon-glow"></div>
-                <div class="brand-icon-inner"><i class="fa-solid fa-motorcycle"></i></div>
-            </div>
-            <div>
-                <div class="brand-text">PHỤ KIỆN XE MÁY <span class="badge-247-sm">247</span></div>
-            </div>
-        </div>
-
-        <div class="sidebar-nav">
-            <div class="nav-label"><i class="fa-solid fa-store me-1"></i> Cửa hàng</div>
-            <a href="{{ route('welcome') }}" class="nav-item-link">
-    <div class="nav-icon"><i class="fa-solid fa-house"></i></div> Trang chủ
-</a>
-<a href="{{ route('cart.index') }}" class="nav-item-link">
-    <div class="nav-icon"><i class="fa-solid fa-cart-shopping"></i></div> Giỏ hàng
-</a>
-            <a href="{{ route('categories.index') }}" class="nav-item-link">
-                <div class="nav-icon"><i class="fa-solid fa-tags"></i></div> Danh Mục Phụ Kiện
-            </a>
-            <a href="{{ route('products.index') }}" class="nav-item-link">
-                <div class="nav-icon"><i class="fa-solid fa-box"></i></div> Sản Phẩm Phụ Kiện
-            </a>
-
-            @auth
-            @if(Auth::user()->isAdmin())
-            <div class="nav-label" style="margin-top: 16px;"><i class="fa-solid fa-shield-halved me-1"></i> Quản trị</div>
-            <a href="{{ route('admin.dashboard', ['section' => 'overview']) }}" class="nav-item-link {{ request()->routeIs('admin.dashboard') && request('section', 'overview') === 'overview' ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-chart-line"></i></div> Bảng Điều Khiển
-            </a>
-            <a href="{{ route('admin.dashboard', ['section' => 'orders']) }}" class="nav-item-link {{ request('section') === 'orders' ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-receipt"></i></div> Đơn hàng
-            </a>
-            <a href="{{ route('admin.finance.index') }}" class="nav-link-custom nav-item-link {{ request()->routeIs('admin.finance.index') ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-chart-pie"></i></div> Thống kê tài chính
-            </a>
-            <a href="{{ route('admin.finance.transactions') }}" class="nav-link-custom nav-item-link {{ request()->routeIs('admin.finance.transactions') ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-money-check-dollar"></i></div> Giao dịch thanh toán
-            </a>
-            <a href="{{ route('admin.dashboard', ['section' => 'inventory']) }}" class="nav-item-link {{ request('section') === 'inventory' ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-warehouse"></i></div> Nhật ký tồn kho
-            </a>
-            <a href="{{ route('admin.dashboard', ['section' => 'users']) }}" class="nav-item-link {{ request('section') === 'users' ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-users"></i></div> Người dùng
-            </a>
-            @endif
-            @endauth
-        </div>
-
-        @auth
-        <div class="sidebar-footer">
-            <div class="sidebar-user">
-                <div class="sidebar-avatar">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</div>
-                <div class="flex-grow-1 min-w-0">
-                    <div class="sidebar-user-name">{{ Auth::user()->name }}</div>
-                    <div class="sidebar-user-role">Quản trị viên</div>
-                </div>
-                <form action="{{ route('logout') }}" method="POST">
-                    @csrf
-                    <button class="sidebar-logout" type="submit" title="Đăng xuất"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-                </form>
-            </div>
-        </div>
-        @endauth
-    </div>
+    @include('partials.admin-navigation')
 
     <!-- MAIN CONTENT -->
     <div class="main-content">
         <!-- TOPBAR ĐỒNG BỘ -->
         <div class="topbar">
             <div>
-                <div class="fw-bold fs-6">Hệ Thống Quản Lý Phụ Kiện Xe Máy</div>
+                <div><span class="eyebrow mb-1">Không gian quản lý / 247</span><div class="fw-bold fs-6">@yield('page_title', 'Hệ thống quản lý cửa hàng')</div></div>
                 <div class="text-muted small"><i class="fa-regular fa-clock me-1"></i>{{ now()->format('d/m/Y') }}</div>
             </div>
             <div class="d-flex align-items-center gap-2">
+                @yield('topbar_actions')
+                @if(auth()->user()?->isAdmin())
                 <a class="btn btn-sm btn-success fw-bold shadow-sm" href="{{ route('admin.reports.revenue.excel') }}" title="Tải file Excel doanh thu">
                     <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel
                 </a>
                 <a class="btn btn-sm btn-danger fw-bold shadow-sm" target="_blank" href="{{ route('admin.reports.revenue.print') }}" title="Mở bản in hoặc xuất PDF">
                     <i class="fa-solid fa-file-pdf me-1"></i> Báo cáo PDF
                 </a>
+                @endif
             </div>
         </div>
 

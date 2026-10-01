@@ -1,128 +1,10 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Nhập | PHỤ KIỆN XE MÁY 247</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f0f4f8;
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            margin: 0;
-        }
-        .login-container {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-            border: 1px solid #f1f5f9;
-            max-width: 420px;
-            width: 100%;
-            padding: 36px;
-        }
-        .brand-header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        .brand-icon {
-            width: 52px; height: 52px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            border-radius: 14px;
-            display: inline-flex; align-items: center; justify-content: center;
-            color: #fff; font-size: 1.4rem;
-            margin-bottom: 12px;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.25);
-        }
-        .brand-title {
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: #0f172a;
-            letter-spacing: 0.5px;
-        }
-        .brand-sub {
-            font-size: 0.8rem;
-            color: #64748b;
-        }
-        .form-group {
-            margin-bottom: 18px;
-        }
-        label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #334155;
-            display: block;
-        }
-        .form-control {
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-size: 0.9rem;
-            background-color: #fafbfc;
-        }
-        .form-control:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
-            background-color: #fff;
-        }
-        .forgot-link {
-            font-size: 0.8rem;
-            color: #2563eb;
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.15s;
-        }
-        .forgot-link:hover {
-            color: #1d4ed8;
-            text-decoration: underline;
-        }
-        .btn-login {
-            width: 100%;
-            padding: 11px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: 700;
-            font-size: 0.92rem;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.25);
-        }
-        .btn-login:hover {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            transform: translateY(-1px);
-        }
-        .register-link {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 0.88rem;
-            color: #64748b;
-        }
-        .register-link a {
-            color: #2563eb;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .register-link a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="brand-header">
-            <div class="brand-icon"><i class="fa-solid fa-motorcycle"></i></div>
-            <div class="brand-title">PHỤ KIỆN XE MÁY 247</div>
-            <div class="brand-sub">Đăng nhập tài khoản hệ thống</div>
-        </div>
+@extends('layouts.auth')
+
+@section('title', 'Đăng nhập')
+
+@section('content')
+<div class="login-container">
+        <div class="brand-header"><span class="eyebrow">Tài khoản của bạn</span><h1>Chào mừng trở lại.</h1><p class="brand-sub">Đăng nhập để tiếp tục hành trình cùng 247.</p></div>
 
         @if (session('error'))
             <div class="alert alert-danger border-0 small mb-3">
@@ -157,7 +39,7 @@
             
             <div class="form-group">
                 <label for="email" class="mb-2">Email</label>
-                <input type="email" name="email" id="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" placeholder="name@example.com" required autofocus>
+                <input autocomplete="email" type="email" name="email" id="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" placeholder="name@example.com" required autofocus>
                 @error('email')
                     <div class="invalid-feedback d-block">{{ $message }}</div>
                 @enderror
@@ -169,7 +51,7 @@
                     <label for="password" class="mb-0">Mật khẩu</label>
                     <a href="{{ route('password.request') }}" class="forgot-link">Quên mật khẩu?</a>
                 </div>
-                <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" placeholder="••••••••" required>
+                <input autocomplete="current-password" type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" placeholder="••••••••" required>
                 @error('password')
                     <div class="invalid-feedback d-block">{{ $message }}</div>
                 @enderror
@@ -184,7 +66,4 @@
             Chưa có tài khoản? <a href="{{ route('register') }}">Đăng ký ngay</a>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+@endsection

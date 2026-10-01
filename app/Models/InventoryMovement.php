@@ -6,7 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class InventoryMovement extends Model
 {
-    protected $fillable = ['product_id', 'user_id', 'type', 'quantity', 'stock_after', 'note'];
+    protected $fillable = ['product_id', 'variant_id', 'user_id', 'type', 'quantity', 'stock_after', 'note'];
+
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'variant_id');
+    }
 
     public function product()
     {

@@ -53,6 +53,36 @@ class FinanceFeatureTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'cod_paid']);
     }
 
+    public function test_admin_can_record_a_momo_refund_in_two_steps(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create();
+        $order = $this->makeOrder($customer, 230000, 'Khach MoMo');
+        $order->update(['status' => 'pending', 'shipping_status' => 'payment_review']);
+        $payment = PaymentTransaction::create(['order_id' => $order->id, 'gateway' => 'momo', 'amount' => 230000, 'status' => 'paid']);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.finance.update-refund', $order), [
+                'payment_status' => 'refund_pending',
+                'current_payment_status' => 'paid',
+                'current_payment_id' => $payment->id,
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('payment_transactions', ['id' => $payment->id, 'status' => 'refund_pending']);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.finance.update-refund', $order), [
+                'payment_status' => 'refunded',
+                'current_payment_status' => 'refund_pending',
+                'current_payment_id' => $payment->id,
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('payment_transactions', ['id' => $payment->id, 'status' => 'refunded']);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'cancelled', 'shipping_status' => 'cancelled']);
+    }
+
     private function makeOrder(User $customer, int $amount, string $name): Order
     {
         return Order::create([

@@ -11,12 +11,19 @@ use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\PaymentTransactionController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\CouponController;
+use App\Http\Controllers\Admin\ReviewController;
+use App\Http\Controllers\Admin\AuditController;
+use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\User\ChatController as UserChatController;
 use App\Http\Controllers\User\MomoController;
 use App\Http\Controllers\User\OrderController;
 use App\Http\Controllers\User\ProfileController;
 use App\Http\Controllers\User\TicketController as UserTicketController;
 use App\Http\Controllers\User\WishlistController;
+use App\Http\Controllers\User\CommerceController;
+use App\Http\Controllers\Webhook\GhnWebhookController;
+use App\Http\Controllers\SeoController;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Wishlist;
@@ -33,6 +40,7 @@ use Illuminate\Support\Facades\Schema;
 */
 Route::post('/payment/momo/ipn', [MomoController::class, 'ipn'])->name('payment.momo.ipn');
 Route::get('/payment/momo/callback', [MomoController::class, 'callback'])->name('user.payment.momo.callback');
+Route::post('/shipping/ghn/webhook/{token}', [GhnWebhookController::class, 'handle'])->name('shipping.ghn.webhook');
 
 Route::prefix('locations')->name('locations.')->group(function () {
     Route::get('/provinces', [OrderController::class, 'getProvinces'])->name('provinces');
@@ -42,6 +50,7 @@ Route::prefix('locations')->name('locations.')->group(function () {
 });
 
 Route::get('/cart', fn() => view('cart.index'))->name('cart.index');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/cart/index', fn() => view('cart.index'));
 Route::view('/faq', 'faq')->name('faq');
 
@@ -49,7 +58,8 @@ Route::get('/products/{product}', [ProductController::class, 'show'])
     ->name('products.show')
     ->whereNumber('product');
 
-Route::get('/test-mail', function () {
+if (app()->environment(['local', 'testing'])) {
+Route::middleware(['auth', 'admin', 'throttle:3,1'])->get('/test-mail', function () {
     try {
         Mail::raw('Xin chào, đây là thư kiểm tra kết nối SMTP từ Phụ Kiện Xe Máy 247!', function ($message) {
             $message->to(config('mail.from.address'))
@@ -57,9 +67,11 @@ Route::get('/test-mail', function () {
         });
         return '<h3 style="color:green;">Gửi email thành công! Hãy kiểm tra hòm thư của bạn.</h3>';
     } catch (\Exception $e) {
-        return '<h3 style="color:red;">Lỗi gửi email:</h3> ' . $e->getMessage();
+        report($e);
+        return '<h3 style="color:red;">Không thể gửi email kiểm tra. Hãy xem nhật ký hệ thống.</h3>';
     }
 });
+}
 
 Route::get('/', function () {
     try {
@@ -123,13 +135,13 @@ Route::get('/', function () {
 */
 Route::middleware('guest')->group(function () {
     Route::get('register', [AuthController::class, 'showRegistrationForm'])->name('register');
-    Route::post('register', [AuthController::class, 'register']);
+    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:5,1');
     Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('login', [AuthController::class, 'login']);
+    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
     // QUÊN VÀ ĐẶT LẠI MẬT KHẨU
     Route::get('forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
-    Route::post('forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::post('forgot-password', [AuthController::class, 'sendResetLinkEmail'])->middleware('throttle:3,1')->name('password.email');
     Route::get('reset-password/{token}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset');
     Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
@@ -166,6 +178,17 @@ Route::middleware('auth')->group(function () {
     Route::prefix('user')->name('user.')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::match(['get', 'put'], '/cart/sync', [CommerceController::class, 'cart'])->name('cart.sync');
+        Route::get('/addresses', [CommerceController::class, 'addresses'])->name('addresses');
+        Route::post('/addresses', [CommerceController::class, 'storeAddress'])->name('addresses.store');
+        Route::patch('/addresses/{address}/default', [CommerceController::class, 'defaultAddress'])->name('addresses.default');
+        Route::delete('/addresses/{address}', [CommerceController::class, 'destroyAddress'])->name('addresses.destroy');
+        Route::post('/coupon/validate', [CommerceController::class, 'validateCoupon'])->name('coupon.validate');
+        Route::get('/notifications', [CommerceController::class, 'notifications'])->name('notifications');
+        Route::get('/notifications/{notification}/read', [CommerceController::class, 'readNotification'])->name('notifications.read');
+        Route::get('/loyalty', [CommerceController::class, 'loyalty'])->name('loyalty');
+        Route::post('/loyalty/redeem', [CommerceController::class, 'redeemPoints'])->name('loyalty.redeem');
+        Route::post('/products/{product}/reviews', [CommerceController::class, 'storeReview'])->name('products.reviews.store');
 
         Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
         Route::post('/wishlist/{product}', [WishlistController::class, 'store'])->name('wishlist.store');
@@ -175,8 +198,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/tickets/create', [UserTicketController::class, 'create'])->name('tickets.create');
         Route::post('/tickets', [UserTicketController::class, 'store'])->name('tickets.store');
 
-        Route::get('/payment', [OrderController::class, 'index'])->name('payment.index');
-        Route::post('/payment/process', [OrderController::class, 'processPayment'])->name('payment.process');
+        Route::get('/payment', [OrderController::class, 'index'])->middleware('verified')->name('payment.index');
+        Route::post('/payment/process', [OrderController::class, 'processPayment'])->middleware('verified')->name('payment.process');
         Route::get('/orders', [OrderController::class, 'orderHistory'])->name('orders.index');
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
@@ -223,6 +246,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/transactions', [FinanceController::class, 'transactions'])->name('transactions');
             Route::get('/export', [FinanceController::class, 'export'])->name('export');
             Route::patch('/orders/{order}/status', [FinanceController::class, 'updateStatus'])->name('update-status');
+            Route::patch('/orders/{order}/refund', [FinanceController::class, 'updateRefund'])->name('update-refund');
         });
 
         Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets.index');
@@ -235,6 +259,15 @@ Route::middleware('auth')->group(function () {
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
         Route::get('/payment-transactions', [PaymentTransactionController::class, 'index'])->name('payment-transactions.index');
+        Route::get('/coupons', [CouponController::class, 'index'])->name('coupons.index');
+        Route::post('/coupons', [CouponController::class, 'store'])->name('coupons.store');
+        Route::patch('/coupons/{coupon}/toggle', [CouponController::class, 'toggle'])->name('coupons.toggle');
+        Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+        Route::patch('/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update');
+        Route::get('/audits', [AuditController::class, 'index'])->name('audits.index');
+        Route::get('/products/{product}/variants', [ProductVariantController::class, 'index'])->name('products.variants.index');
+        Route::post('/products/{product}/variants', [ProductVariantController::class, 'store'])->name('products.variants.store');
+        Route::patch('/variants/{variant}', [ProductVariantController::class, 'update'])->name('products.variants.update');
         Route::get('/chat/users', [AdminChatController::class, 'getUsers'])->name('chat.users');
         Route::get('/chat/messages/{userId}', [AdminChatController::class, 'getMessages'])->name('chat.messages');
         Route::post('/chat/send', [AdminChatController::class, 'send'])->name('chat.send');

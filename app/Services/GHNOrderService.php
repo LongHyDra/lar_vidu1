@@ -6,9 +6,7 @@ use App\Models\Order;
 
 class GHNOrderService
 {
-    public function __construct(private GHNService $ghn)
-    {
-    }
+    public function __construct(private GHNService $ghn) {}
 
     public function create(Order $order, bool $isPaid = false): array
     {
@@ -16,50 +14,50 @@ class GHNOrderService
         $weight = 0;
 
         foreach ($order->items as $item) {
-            $itemWeight = (int) ($item->product->weight ?? 200);
+            $itemWeight = (int) ($item->variant->weight ?? $item->product->weight ?? 200);
             $itemWeight = $itemWeight > 0 ? $itemWeight : 200;
             $weight += $itemWeight * (int) $item->quantity;
 
             $items[] = [
-                'name' => (string) ($item->product->name ?? 'Phụ kiện xe máy'),
+                'name' => trim((string) ($item->product->name ?? 'Phụ kiện xe máy').' '.($item->variant->variant_name ?? '')),
                 'quantity' => (int) $item->quantity,
                 'price' => (int) $item->price,
                 'weight' => $itemWeight,
             ];
         }
 
-        // Hạn mức COD GHN Sandbox tối đa 5.000.000đ (nếu đơn lớn hơn thì giới hạn 5tr để không bị GHN từ chối)
+        // Không được cắt giảm số tiền thu hộ; để GHN trả lỗi nếu vượt hạn mức.
         $codAmount = 0;
-        if (!$isPaid) {
-            $codAmount = min((int) $order->total_price, 5000000);
+        if (! $isPaid) {
+            $codAmount = (int) $order->total_price;
         }
 
         $fromDistrictId = (int) config('services.ghn.from_district_id', env('GHN_FROM_DISTRICT_ID', 1450));
 
         $payload = [
-            'payment_type_id' => 2, // Người nhận trả cước
-            'note' => 'Đơn hàng phụ kiện #' . $order->id,
+            'payment_type_id' => 1, // Shop trả cước; tổng đơn đã bao gồm phí giao hàng.
+            'note' => 'Đơn hàng phụ kiện #'.$order->id,
             'required_note' => 'KHONGCHOXEMHANG',
-            
+
             // 1. THÔNG TIN NGƯỜI GỬI / KHO XUẤT HÀNG (BẮT BUỘC ĐỂ KHÔNG BỊ LỖI 400)
             'from_name' => 'PHỤ KIỆN XE MÁY 247',
             'from_phone' => '0901234567',
             'from_address' => '123 Đường Cầu Giấy, Phường Dịch Vọng, Quận Cầu Giấy, Hà Nội',
             'from_district_id' => $fromDistrictId,
             'from_ward_code' => '1A0107',
-            
+
             // 2. THÔNG TIN HOÀN HÀNG
             'return_phone' => '0901234567',
             'return_address' => '123 Đường Cầu Giấy, Phường Dịch Vọng, Quận Cầu Giấy, Hà Nội',
             'return_district_id' => $fromDistrictId,
-            
+
             // 3. THÔNG TIN NGƯỜI NHẬN
             'to_name' => $order->name,
             'to_phone' => $order->phone,
             'to_address' => $order->address,
             'to_ward_code' => (string) $order->to_ward_code,
             'to_district_id' => (int) $order->to_district_id,
-            
+
             // 4. TIỀN COD & TRỌNG LƯỢNG
             'cod_amount' => $codAmount,
             'weight' => $weight > 0 ? $weight : 300,

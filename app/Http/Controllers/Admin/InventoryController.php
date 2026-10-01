@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryMovement;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\View\View;
 
 class InventoryController extends Controller
@@ -15,10 +16,11 @@ class InventoryController extends Controller
             ->where('stock', '<=', 5)
             ->orderBy('stock')
             ->get();
-        $movements = InventoryMovement::with('product', 'user')
+        $lowStockVariants = ProductVariant::with('product')->where('stock', '<=', 5)->orderBy('stock')->get();
+        $movements = InventoryMovement::with('product', 'variant', 'user')
             ->latest()
             ->paginate(30);
 
-        return view('admin.inventory.index', compact('lowStockProducts', 'movements'));
+        return view('admin.inventory.index', compact('lowStockProducts', 'lowStockVariants', 'movements'));
     }
 }

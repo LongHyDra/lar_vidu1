@@ -22,6 +22,9 @@
         <div class="header">
             <h2>Hồ sơ cá nhân</h2>
             <a href="{{ route('welcome') }}" class="btn btn-link text-decoration-none">← Về trang chủ</a>
+            <a href="{{ route('user.addresses') }}" class="btn btn-outline-primary btn-sm ms-2">Địa chỉ giao hàng</a>
+            <a href="{{ route('user.notifications') }}" class="btn btn-outline-secondary btn-sm ms-2">Thông báo</a>
+            <a href="{{ route('user.loyalty') }}" class="btn btn-outline-warning btn-sm ms-2">Điểm thưởng</a>
         </div>
 
         @if (session('success'))

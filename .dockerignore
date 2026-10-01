@@ -1,0 +1,16 @@
+.git
+.github
+.env
+.env.*
+auth.json
+vendor
+node_modules
+tests
+storage
+bootstrap/cache
+database/*.sqlite*
+**/*.sql
+**/*.pem
+**/*.key
+**/*.log
+docker/*.env*

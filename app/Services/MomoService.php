@@ -65,7 +65,7 @@ class MomoService
 
         try {
             $response = Http::withOptions([
-                'verify' => false,
+                'verify' => config('services.momo.verify_ssl', true),
             ])->acceptJson()->timeout(15)->post($endpoint, $data);
 
             $result = $response->json() ?? [];

@@ -7,11 +7,16 @@ use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
+use App\Models\AdminAudit;
+use App\Models\SiteNotification;
 use App\Models\PaymentTransaction;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\User;
 use App\Services\GHNOrderService;
 use App\Services\GHNService;
+use App\Services\OrderCancellationService;
+use App\Services\LoyaltyService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,28 +31,28 @@ class AdminController extends Controller
     public function dashboard(Request $request)
     {
         $section = $request->input('section', 'overview');
-        if (!in_array($section, ['overview', 'financial', 'users', 'payments', 'orders', 'inventory'], true)) {
+        if (! in_array($section, ['overview', 'financial', 'users', 'payments', 'orders', 'inventory'], true)) {
             $section = 'overview';
         }
 
         $orderStatus = $request->input('order_status');
-        if ($orderStatus && !in_array($orderStatus, ['pending', 'confirmed', 'packaging', 'shipping', 'delivered', 'cancelled', 'cod_ordered'], true)) {
+        if ($orderStatus && ! in_array($orderStatus, ['pending', 'confirmed', 'packaging', 'shipping', 'delivered', 'cancelled', 'cod_ordered'], true)) {
             $orderStatus = null;
         }
 
         $period = (int) $request->input('period', 30);
-        if (!in_array($period, [7, 30, 90, 365], true)) {
+        if (! in_array($period, [7, 30, 90, 365], true)) {
             $period = 30;
         }
 
         $fromDate = $request->input('from');
         $toDate = $request->input('to');
 
-        if ($fromDate && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fromDate)) {
+        if ($fromDate && ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $fromDate)) {
             $fromDate = null;
         }
 
-        if ($toDate && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $toDate)) {
+        if ($toDate && ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $toDate)) {
             $toDate = null;
         }
 
@@ -55,10 +60,13 @@ class AdminController extends Controller
         $totalProducts = Product::count();
         $totalCategories = Category::count();
         $lowStockProducts = Product::where('stock', '<=', 5)->count();
-        $totalValue = Product::sum(DB::raw('price * stock'));
+        $lowStockVariants = ProductVariant::where('stock', '<=', 5)->count();
+        $totalValue = Product::sum(DB::raw('price * stock')) + ProductVariant::sum(DB::raw('price * stock'));
+        $loyaltyPointsOutstanding = (int) User::sum('loyalty_points');
+        $loyaltyUsers = User::where('loyalty_points', '>', 0)->count();
 
         // 2. Thống kê đơn hàng & doanh thu (loại bỏ đơn hủy)
-        $activeOrders = Order::whereNotIn('status', ['cancelled']);
+        $activeOrders = Order::revenue();
         $totalOrdersQuery = Order::query();
         $cancelledOrdersQuery = Order::where('status', 'cancelled');
 
@@ -120,7 +128,7 @@ class AdminController extends Controller
         $dailyRevenueQuery = Order::select(
             DB::raw('DATE(created_at) as date'),
             DB::raw('SUM(total_price) as total_revenue')
-        )->whereNotIn('status', ['cancelled']);
+        )->revenue();
 
         if ($fromDate) {
             $dailyRevenueQuery->where('created_at', '>=', Carbon::parse($fromDate)->startOfDay());
@@ -145,7 +153,7 @@ class AdminController extends Controller
             DB::raw("{$monthFormat} as month"),
             DB::raw('SUM(total_price) as total_revenue')
         )
-            ->whereNotIn('status', ['cancelled'])
+            ->revenue()
             ->where('created_at', '>=', now()->subMonths(11)->startOfMonth())
             ->groupBy(DB::raw($monthFormat))
             ->orderBy('month')
@@ -153,7 +161,7 @@ class AdminController extends Controller
 
         // 7. Nạp danh sách đơn hàng chi tiết
         $recentOrders = Order::with(['user', 'items.product', 'paymentTransaction', 'statusHistories.user'])
-            ->when($orderStatus, fn($query) => $query->where('status', $orderStatus))
+            ->when($orderStatus, fn ($query) => $query->where('status', $orderStatus))
             ->orderByDesc('created_at')
             ->get();
 
@@ -163,32 +171,35 @@ class AdminController extends Controller
 
         $users = User::withCount('orders')->latest()->get();
         $transactions = PaymentTransaction::with('order.user')->latest()->get();
-        $movements = InventoryMovement::with('product', 'user')->latest()->limit(50)->get();
+        $movements = InventoryMovement::with('product', 'variant', 'user')->latest()->limit(50)->get();
 
         return view('admin.dashboard', [
-            'totalProducts'      => $totalProducts,
-            'totalCategories'    => $totalCategories,
-            'lowStockProducts'   => $lowStockProducts,
-            'totalValue'         => $totalValue,
-            'totalOrders'        => $totalOrders,
-            'cancelledOrders'    => $cancelledOrders,
-            'totalRevenue'       => $totalRevenue,
-            'totalSoldQty'       => $totalSoldQty,
-            'todayRevenue'       => $todayRevenue,
-            'monthRevenue'       => $monthRevenue,
-            'period'             => $period,
-            'fromDate'           => $fromDate,
-            'toDate'             => $toDate,
-            'topProducts'        => $topProducts,
-            'dailyRevenue'       => $dailyRevenue,
-            'monthlyRevenue'     => $monthlyRevenue,
-            'recentOrders'       => $recentOrders,
-            'section'            => $section,
-            'orderStatus'        => $orderStatus,
-            'orderStatusCounts'  => $orderStatusCounts,
-            'users'              => $users,
-            'transactions'       => $transactions,
-            'movements'          => $movements,
+            'totalProducts' => $totalProducts,
+            'totalCategories' => $totalCategories,
+            'lowStockProducts' => $lowStockProducts,
+            'lowStockVariants' => $lowStockVariants,
+            'loyaltyPointsOutstanding' => $loyaltyPointsOutstanding,
+            'loyaltyUsers' => $loyaltyUsers,
+            'totalValue' => $totalValue,
+            'totalOrders' => $totalOrders,
+            'cancelledOrders' => $cancelledOrders,
+            'totalRevenue' => $totalRevenue,
+            'totalSoldQty' => $totalSoldQty,
+            'todayRevenue' => $todayRevenue,
+            'monthRevenue' => $monthRevenue,
+            'period' => $period,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
+            'topProducts' => $topProducts,
+            'dailyRevenue' => $dailyRevenue,
+            'monthlyRevenue' => $monthlyRevenue,
+            'recentOrders' => $recentOrders,
+            'section' => $section,
+            'orderStatus' => $orderStatus,
+            'orderStatusCounts' => $orderStatusCounts,
+            'users' => $users,
+            'transactions' => $transactions,
+            'movements' => $movements,
         ]);
     }
 
@@ -201,9 +212,9 @@ class AdminController extends Controller
         $to = $request->input('to');
 
         $orders = Order::with(['user', 'paymentTransaction'])
-            ->whereNotIn('status', ['cancelled'])
-            ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
+            ->revenue()
+            ->when($from, fn ($q) => $q->whereDate('created_at', '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate('created_at', '<=', $to))
             ->orderByDesc('created_at')
             ->get();
 
@@ -218,7 +229,7 @@ class AdminController extends Controller
                 $productSubtotal = max(0, $order->total_price - ($order->ghn_total_fee ?? 0));
 
                 fputcsv($handle, [
-                    '#' . $order->id,
+                    '#'.$order->id,
                     $order->created_at->format('d/m/Y H:i'),
                     $order->user->name ?? $order->name,
                     $order->phone,
@@ -231,7 +242,7 @@ class AdminController extends Controller
                 ]);
             }
             fclose($handle);
-        }, 'bao-cao-doanh-thu-' . now()->format('Ymd-His') . '.csv', [
+        }, 'bao-cao-doanh-thu-'.now()->format('Ymd-His').'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
@@ -245,13 +256,13 @@ class AdminController extends Controller
         $to = $request->input('to');
 
         $orders = Order::with(['user', 'paymentTransaction'])
-            ->whereNotIn('status', ['cancelled'])
-            ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
+            ->revenue()
+            ->when($from, fn ($q) => $q->whereDate('created_at', '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate('created_at', '<=', $to))
             ->orderByDesc('created_at')
             ->get();
 
-        $filename = 'bao-cao-doanh-thu-' . date('d-m-Y') . '.xls';
+        $filename = 'bao-cao-doanh-thu-'.date('d-m-Y').'.xls';
 
         return response()->view('admin.reports.revenue-excel', compact('orders', 'from', 'to'))
             ->header('Content-Type', 'application/vnd.ms-excel; charset=UTF-8')
@@ -269,16 +280,16 @@ class AdminController extends Controller
         $to = $request->input('to');
 
         $orders = Order::with(['user', 'paymentTransaction'])
-            ->whereNotIn('status', ['cancelled'])
-            ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
+            ->revenue()
+            ->when($from, fn ($q) => $q->whereDate('created_at', '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate('created_at', '<=', $to))
             ->orderByDesc('created_at')
             ->get();
 
         return view('admin.reports.revenue-print', [
             'orders' => $orders,
-            'from'   => $from,
-            'to'     => $to,
+            'from' => $from,
+            'to' => $to,
         ]);
     }
 
@@ -297,7 +308,7 @@ class AdminController extends Controller
     /**
      * Cập nhật tiến độ giao hàng & Tự động đồng bộ sang GHN và bảng Thanh toán
      */
-    public function updateOrderStatus(Request $request, Order $order, GHNService $ghn)
+    public function updateOrderStatus(Request $request, Order $order, GHNService $ghn, LoyaltyService $loyalty)
     {
         $request->validate([
             'status' => ['required', 'string', 'in:pending,confirmed,packaging,shipping,delivered,cancelled'],
@@ -310,70 +321,72 @@ class AdminController extends Controller
                 ->with('error', 'Đơn hàng đã hủy không thể thay đổi trạng thái.');
         }
 
-        // 1. Nếu hủy đơn: Hủy vận đơn GHN và hoàn lại tồn kho sản phẩm
-        if ($newStatus === 'cancelled' && $order->status !== 'cancelled') {
-            if (!empty($order->ghn_order_code)) {
-                try {
-                    $ghn->cancelOrder([$order->ghn_order_code]);
-                } catch (\Exception $e) {
-                    Log::warning("Không thể hủy vận đơn GHN #{$order->ghn_order_code}: " . $e->getMessage());
-                }
+        if ($newStatus === 'cancelled') {
+            app(OrderCancellationService::class)->cancel($order, $request->user(), $ghn);
+
+            return redirect()->route('admin.dashboard', ['section' => 'orders'])
+                ->with('success', 'Đã hủy đơn hàng.');
+        }
+
+        return DB::transaction(function () use ($order, $newStatus, $ghn, $loyalty) {
+            $order = Order::lockForUpdate()->findOrFail($order->id);
+            if ($order->status === 'cancelled') {
+                return back()->with('error', 'Đơn đã hủy không thể thay đổi trạng thái.');
+            }
+            if (! $order->hasDeductedStock()) {
+                return back()->with('error', 'Đơn chưa được xử lý tồn kho; hãy kiểm tra thanh toán trước.');
             }
 
-            foreach ($order->items as $item) {
-                if ($item->product) {
-                    $item->product->increment('stock', $item->quantity);
-                    InventoryMovement::create([
-                        'product_id'  => $item->product->id,
-                        'user_id'     => Auth::id(),
-                        'type'        => 'in',
-                        'quantity'    => $item->quantity,
-                        'stock_after' => $item->product->fresh()->stock,
-                        'note'        => "Hoàn kho khi admin hủy đơn #{$order->id}",
+            // 2. Tự động đồng bộ: Khi giao hàng thành công -> chuyển giao dịch sang Đã thu tiền (paid)
+            if ($newStatus === 'delivered') {
+                $payment = $order->paymentTransaction;
+                if ($payment && $payment->gateway === 'cod' && $payment->status === 'pending') {
+                    $payment->update([
+                        'status' => 'paid',
+                        'paid_at' => now(),
+                        'message' => 'Admin xác nhận giao hàng thành công (Đã thu tiền)',
                     ]);
                 }
-            }
-        }
 
-        // 2. Tự động đồng bộ: Khi giao hàng thành công -> chuyển giao dịch sang Đã thu tiền (paid)
-        if ($newStatus === 'delivered') {
-            $payment = $order->paymentTransaction;
-            if ($payment && $payment->status !== 'paid') {
-                $payment->update([
-                    'status'  => 'paid',
-                    'paid_at' => now(),
-                    'message' => 'Admin xác nhận giao hàng thành công (Đã thu tiền)',
-                ]);
-            }
-
-            // Đồng bộ sang GHN Sandbox nếu có mã vận đơn
-            if (!empty($order->ghn_order_code)) {
-                try {
-                    if (method_exists($ghn, 'switchStatus')) {
-                        $ghn->switchStatus([$order->ghn_order_code], 'delivered');
+                // Đồng bộ sang GHN Sandbox nếu có mã vận đơn
+                if (! empty($order->ghn_order_code)) {
+                    try {
+                        if (method_exists($ghn, 'switchStatus')) {
+                            $ghn->switchStatus([$order->ghn_order_code], 'delivered');
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Không thể đổi trạng thái GHN #{$order->ghn_order_code}: ".$e->getMessage());
                     }
-                } catch (\Exception $e) {
-                    Log::warning("Không thể đổi trạng thái GHN #{$order->ghn_order_code}: " . $e->getMessage());
                 }
             }
-        }
 
-        $order->status = $newStatus;
-        if ($newStatus === 'cancelled') {
-            $order->shipping_status = 'cancelled';
-        }
+            $order->status = $newStatus;
+            if ($newStatus === 'cancelled') {
+                $order->shipping_status = 'cancelled';
+            }
 
-        $order->save();
+            $order->save();
 
-        OrderStatusHistory::create([
-            'order_id'   => $order->id,
-            'status'     => $newStatus,
-            'note'       => 'Admin cập nhật trạng thái đơn: ' . $newStatus,
-            'changed_by' => Auth::id(),
-        ]);
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'status' => $newStatus,
+                'note' => 'Admin cập nhật trạng thái đơn: '.$newStatus,
+                'changed_by' => Auth::id(),
+            ]);
+            AdminAudit::record('order.status_updated', $order, ['status' => $newStatus]);
+            if ($newStatus === 'delivered') {
+                $loyalty->awardForOrder($order->fresh());
+            }
+            SiteNotification::create([
+                'user_id' => $order->user_id,
+                'title' => 'Đơn hàng cập nhật',
+                'body' => 'Đơn #'.$order->id.' vừa chuyển sang trạng thái: '.$newStatus.'.',
+                'url' => route('user.orders.show', $order),
+            ]);
 
-        return redirect()->route('admin.dashboard', ['section' => 'orders'])
-            ->with('success', 'Cập nhật trạng thái đơn hàng thành công.');
+            return redirect()->route('admin.dashboard', ['section' => 'orders'])
+                ->with('success', 'Cập nhật trạng thái đơn hàng thành công.');
+        });
     }
 
     /**
@@ -381,31 +394,38 @@ class AdminController extends Controller
      */
     public function createGhnOrder(Order $order, GHNOrderService $ghnOrders)
     {
-        $order->load('items.product', 'paymentTransaction');
-        
-        $payStatus = $order->paymentTransaction->status ?? ($order->status === 'paid' ? 'paid' : '');
-        $isPaid = in_array($order->status, ['delivered', 'paid', 'cod_paid'], true) || $payStatus === 'paid';
+        return DB::transaction(function () use ($order, $ghnOrders) {
+            $order = Order::lockForUpdate()->findOrFail($order->id);
+            if ($order->status === 'cancelled' || $order->ghn_order_code || ! $order->hasDeductedStock()) {
+                return back()->with('error', 'Đơn không đủ điều kiện tạo vận đơn hoặc đã có vận đơn.');
+            }
+            $order->load('items.product', 'paymentTransaction');
 
-        $res = $ghnOrders->create($order, $isPaid);
+            $payStatus = $order->paymentTransaction->status ?? ($order->status === 'paid' ? 'paid' : '');
+            $isPaid = in_array($order->status, ['delivered', 'paid', 'cod_paid'], true) || $payStatus === 'paid';
 
-        if (($res['code'] ?? null) == 200 && !empty($res['data']['order_code'])) {
-            $order->update([
-                'ghn_order_code'  => $res['data']['order_code'],
-                'ghn_total_fee'   => (int) ($res['data']['total_fee'] ?? $order->ghn_total_fee),
-                'shipping_status' => 'ready_to_pick',
-            ]);
+            $res = $ghnOrders->create($order, $isPaid);
 
-            OrderStatusHistory::create([
-                'order_id'   => $order->id,
-                'status'     => $order->status,
-                'note'       => 'Admin tạo vận đơn GHN thành công: ' . $res['data']['order_code'],
-                'changed_by' => Auth::id(),
-            ]);
+            if (($res['code'] ?? null) == 200 && ! empty($res['data']['order_code'])) {
+                $order->update([
+                    'ghn_order_code' => $res['data']['order_code'],
+                    'ghn_total_fee' => (int) ($res['data']['total_fee'] ?? $order->ghn_total_fee),
+                    'shipping_status' => 'ready_to_pick',
+                ]);
 
-            return back()->with('success', 'Tạo vận đơn GHN thành công! Mã: ' . $res['data']['order_code']);
-        }
+                OrderStatusHistory::create([
+                    'order_id' => $order->id,
+                    'status' => $order->status,
+                    'note' => 'Admin tạo vận đơn GHN thành công: '.$res['data']['order_code'],
+                    'changed_by' => Auth::id(),
+                ]);
 
-        $errorMsg = $res['message'] ?? ($res['code_message_value'] ?? 'Lỗi không xác định từ GHN');
-        return back()->with('error', 'Lỗi GHN: ' . $errorMsg);
+                return back()->with('success', 'Tạo vận đơn GHN thành công! Mã: '.$res['data']['order_code']);
+            }
+
+            $errorMsg = $res['message'] ?? ($res['code_message_value'] ?? 'Lỗi không xác định từ GHN');
+
+            return back()->with('error', 'Lỗi GHN: '.$errorMsg);
+        });
     }
 }

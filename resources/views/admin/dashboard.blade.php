@@ -145,9 +145,15 @@
         }
         .order-status-chip.active { background: #2563eb; border-color: #2563eb; color: #fff; }
     </style>
+
+    @stack('styles')
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/account-admin.css') }}">
+    <script src="{{ asset('js/account-admin.js') }}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
 </head>
 
-<body>
+<body class="admin-theme">
     @php
     $orderStatusLabels = [
         'pending' => 'Chờ xác nhận',
@@ -161,76 +167,10 @@
     @endphp
 
     <!-- SIDEBAR -->
-    <div class="sidebar">
-        <div class="sidebar-brand">
-            <div class="brand-icon-wrap">
-                <div class="brand-icon-glow"></div>
-                <div class="brand-icon-inner"><i class="fa-solid fa-motorcycle"></i></div>
-            </div>
-            <div>
-                <div class="brand-text">PHỤ KIỆN XE MÁY <span class="badge-247-sm">247</span></div>
-            </div>
-        </div>
-
-        <div class="sidebar-nav">
-            <div class="nav-label"><i class="fa-solid fa-store me-1"></i> Cửa hàng</div>
-            <a href="{{ route('welcome') }}" class="nav-item-link">
-                <div class="nav-icon"><i class="fa-solid fa-house"></i></div> Trang chủ
-            </a>
-            <a href="{{ route('cart.index') }}" class="nav-item-link">
-                <div class="nav-icon"><i class="fa-solid fa-cart-shopping"></i></div> Giỏ hàng
-            </a>
-            <a href="{{ route('categories.index') }}" class="nav-item-link">
-                <div class="nav-icon"><i class="fa-solid fa-tags"></i></div> Danh Mục Phụ Kiện
-            </a>
-            <a href="{{ route('products.index') }}" class="nav-item-link">
-                <div class="nav-icon"><i class="fa-solid fa-box"></i></div> Sản Phẩm Phụ Kiện
-            </a>
-
-            @auth
-            @if(Auth::user()->isAdmin())
-            <div class="nav-label" style="margin-top: 16px;"><i class="fa-solid fa-shield-halved me-1"></i> Quản trị</div>
-            <a href="{{ route('admin.dashboard', ['section' => 'overview']) }}" class="nav-item-link {{ $section === 'overview' ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-chart-line"></i></div> Bảng Điều Khiển
-            </a>
-            <a href="{{ route('admin.dashboard', ['section' => 'orders']) }}" class="nav-item-link {{ $section === 'orders' ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-receipt"></i></div> Đơn hàng
-            </a>
-            <a href="{{ route('admin.finance.index') }}" class="nav-item-link">
-                <div class="nav-icon"><i class="fa-solid fa-chart-pie"></i></div> Thống kê tài chính
-            </a>
-            <a href="{{ route('admin.finance.transactions') }}" class="nav-item-link">
-                <div class="nav-icon"><i class="fa-solid fa-money-check-dollar"></i></div> Giao dịch thanh toán
-            </a>
-            <a href="{{ route('admin.dashboard', ['section' => 'inventory']) }}" class="nav-item-link {{ $section === 'inventory' ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-warehouse"></i></div> Nhật ký tồn kho
-            </a>
-            <a href="{{ route('admin.dashboard', ['section' => 'users']) }}" class="nav-item-link {{ $section === 'users' ? 'active' : '' }}">
-                <div class="nav-icon"><i class="fa-solid fa-users"></i></div> Người dùng
-            </a>
-            @endif
-            @endauth
-        </div>
-
-        @auth
-        <div class="sidebar-footer">
-            <div class="sidebar-user">
-                <div class="sidebar-avatar">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</div>
-                <div class="flex-grow-1 min-w-0">
-                    <div class="sidebar-user-name">{{ Auth::user()->name }}</div>
-                    <div class="sidebar-user-role">Quản trị viên</div>
-                </div>
-                <form action="{{ route('logout') }}" method="POST">
-                    @csrf
-                    <button class="sidebar-logout" type="submit" title="Đăng xuất"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-                </form>
-            </div>
-        </div>
-        @endauth
-    </div>
+    @include('partials.admin-navigation')
 
     <!-- MAIN CONTENT -->
-    <div class="main-content">
+    <div class="main-content"><header class="admin-welcome"><span class="eyebrow">Không gian quản lý / 247</span><h1>Chào bạn, {{ auth()->user()->name }}.</h1><p>Theo dõi cửa hàng, quản lý đơn hàng và kết nối với khách hàng.</p></header>
         <!-- TOPBAR -->
         <div class="topbar">
             <div>
@@ -264,8 +204,8 @@
         <div data-dashboard-section="overview">
             <div class="welcome-card">
                 <i class="fa-solid fa-motorcycle bg-icon"></i>
-                <h2>Xin chào Quản Trị Viên! 👋</h2>
-                <p>Chào mừng bạn đến với Hệ thống Quản lý Phụ Kiện Xe Máy 247. Theo dõi các chỉ số kho hàng và kết quả bán hàng bên dưới.</p>
+                <h2>Mọi hoạt động. Một góc nhìn.</h2>
+                <p>Nắm bắt tình hình kinh doanh, kiểm tra tồn kho và theo dõi đơn hàng ngay tại đây.</p>
             </div>
 
             <div class="row g-3 mb-4">
@@ -305,6 +245,12 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3"><div class="stat-card h-100"><div class="stat-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div><div><div class="stat-value">{{ number_format(($lowStockProducts ?? 0) + ($lowStockVariants ?? 0)) }}</div><div class="stat-label">Cảnh báo tồn kho (gồm biến thể)</div></div></div></div>
+                <div class="col-md-3"><div class="stat-card h-100"><div class="stat-icon purple"><i class="fa-solid fa-award"></i></div><div><div class="stat-value">{{ number_format($loyaltyPointsOutstanding ?? 0) }}</div><div class="stat-label">Điểm thưởng đang lưu hành</div></div></div></div>
+                <div class="col-md-3"><div class="stat-card h-100"><div class="stat-icon blue"><i class="fa-solid fa-user-check"></i></div><div><div class="stat-value">{{ number_format($loyaltyUsers ?? 0) }}</div><div class="stat-label">Khách có điểm thưởng</div></div></div></div>
             </div>
 
             <div class="row g-3 mb-4">
@@ -473,6 +419,11 @@
                     </a>
                 </div>
             </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-lg-8"><div class="report-panel"><div class="report-heading"><h3>Biểu đồ doanh thu</h3><span class="text-muted small">Dữ liệu theo kỳ lọc</span></div><canvas id="revenueChart" height="120"></canvas></div></div>
+            <div class="col-lg-4"><div class="report-panel"><div class="report-heading"><h3>Cơ cấu đơn hàng</h3></div><canvas id="orderStatusChart" height="190"></canvas></div></div>
         </div>
 
         <!-- 2. ORDERS SECTION (TÁCH BIỆT THANH TOÁN, VẬN ĐƠN VÀ CHI TIẾT) -->
@@ -962,6 +913,19 @@
             document.querySelectorAll('.revenue-bar[data-height]').forEach(function(bar) {
                 bar.style.height = bar.getAttribute('data-height') + 'px';
             });
+
+            if (window.Chart) {
+                new Chart(document.getElementById('revenueChart'), {
+                    type: 'line',
+                    data: {labels: @json($dailyRevenue->pluck('date')->values()), datasets: [{label: 'Doanh thu', data: @json($dailyRevenue->pluck('total_revenue')->values()), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.12)', fill: true, tension: .35}]},
+                    options: {responsive: true, plugins: {legend: {display: false}}, scales: {y: {ticks: {callback: value => new Intl.NumberFormat('vi-VN', {notation: 'compact'}).format(value)}}}}
+                });
+                new Chart(document.getElementById('orderStatusChart'), {
+                    type: 'doughnut',
+                    data: {labels: @json($orderStatusCounts->keys()->values()), datasets: [{data: @json($orderStatusCounts->values()), backgroundColor: ['#2563eb', '#16a34a', '#f59e0b', '#9333ea', '#ef4444', '#64748b']}]},
+                    options: {responsive: true, plugins: {legend: {position: 'bottom'}}}
+                });
+            }
 
             const activeSection = "{{ $section }}";
             document.querySelectorAll('[data-dashboard-section]').forEach(function(element) {

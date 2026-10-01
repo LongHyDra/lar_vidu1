@@ -16,7 +16,7 @@
 <!-- BỘ LỌC TÌM KIẾM GIAO DỊCH -->
 <div class="card-panel">
     <div class="card-panel-title">
-        <i class="fa-solid fa-filter text-primary"></i> Tra Cứu Giao Dịch & Quản Lý Đơn COD
+        <i class="fa-solid fa-filter text-primary"></i> Tra Cứu Giao Dịch & Xử Lý COD / Hoàn Tiền
     </div>
     <form action="{{ route('admin.finance.transactions') }}" method="GET">
         <div class="row g-3">
@@ -82,7 +82,7 @@
 
 <p class="text-muted small mb-3">
     <i class="fa-solid fa-circle-info me-1 text-primary"></i> Có <strong>{{ number_format($orders->total()) }}</strong> đơn phù hợp. 
-    <em>(COD: xác nhận thu tiền hoặc thất bại; đơn đã thu tiền có thể chuyển sang chờ hoàn tiền rồi xác nhận đã hoàn tiền).</em>
+    <em>COD được xác nhận thu tiền tại đây. Đơn MoMo cần rà soát hoặc hoàn tiền cũng được xử lý theo từng bước và có lịch sử lưu vết.</em>
 </p>
 
 <!-- BẢNG DANH SÁCH GIAO DỊCH -->
@@ -99,12 +99,13 @@
                     <th>Phương thức</th>
                     <th class="text-end">Số tiền</th>
                     <th>Thanh toán</th>
-                    <th class="text-end" style="min-width: 220px;">Cập nhật COD</th>
+                    <th class="text-end" style="min-width: 220px;">Xử lý giao dịch</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($orders as $order)
-                @php($canUpdate = $order->gateway === 'cod' && isset($codTransitions[$order->payment_status]))
+                @php($canUpdateCod = $order->gateway === 'cod' && isset($codTransitions[$order->payment_status]))
+                @php($canUpdateRefund = $order->gateway === 'momo' && in_array($order->payment_status, ['paid', 'refund_pending'], true) && in_array($order->shipping_status, ['payment_review', 'pending', 'not_shipped', 'cancelled'], true))
                 <tr>
                     <td>
                         <strong class="text-primary">#{{ $order->id }}</strong><br>
@@ -128,7 +129,7 @@
                         </span>
                     </td>
                     <td class="text-end">
-                        @if($canUpdate)
+                        @if($canUpdateCod)
                         <form method="POST" action="{{ route('admin.finance.update-status', $order->id) }}" class="d-inline-flex align-items-center justify-content-end gap-1">
                             @csrf
                             @method('PATCH')
@@ -144,6 +145,23 @@
                             <input type="hidden" name="current_payment_id" value="{{ $order->payment_id ?? 0 }}">
                             <button type="submit" class="btn btn-primary btn-sm px-2 fw-bold" title="Lưu trạng thái">
                                 <i class="fa-solid fa-floppy-disk"></i>
+                            </button>
+                        </form>
+                        @elseif($canUpdateRefund)
+                        <form method="POST" action="{{ route('admin.finance.update-refund', $order->id) }}" class="d-inline-flex align-items-center justify-content-end gap-1">
+                            @csrf
+                            @method('PATCH')
+                            <select name="payment_status" class="form-select form-select-sm" style="width: auto; min-width: 140px;">
+                                @if($order->payment_status === 'paid')
+                                <option value="refund_pending">Chờ hoàn tiền</option>
+                                @else
+                                <option value="refunded">Đã hoàn tiền</option>
+                                @endif
+                            </select>
+                            <input type="hidden" name="current_payment_status" value="{{ $order->payment_status }}">
+                            <input type="hidden" name="current_payment_id" value="{{ $order->payment_id }}">
+                            <button type="submit" class="btn btn-warning btn-sm px-2 fw-bold" title="Xác nhận đã xử lý hoàn tiền">
+                                <i class="fa-solid fa-rotate-left"></i>
                             </button>
                         </form>
                         @else

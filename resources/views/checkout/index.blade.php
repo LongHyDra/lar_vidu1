@@ -33,6 +33,7 @@
         .btn-order-submit { background: #2563eb; border: none; border-radius: 10px; padding: 14px; font-size: 1rem; font-weight: 700; color: #fff; width: 100%; transition: background 0.2s; }
         .btn-order-submit:hover { background: #1d4ed8; }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
 </head>
 
 <body>
@@ -55,7 +56,7 @@
     </header>
 
     <!-- CHECKOUT CONTENT -->
-    <div class="container pb-5">
+    <main class="container pb-5"><div class="page-intro"><span class="eyebrow">Hoàn tất lựa chọn</span><h1>Một bước nữa, sẵn sàng lên đường.</h1><p>Điền địa chỉ giao hàng và chọn cách thanh toán phù hợp.</p></div><nav class="step-bar" aria-label="Tiến trình mua hàng"><a class="step-item text-decoration-none" href="{{ route('cart.index') }}"><span class="step-num">1</span> Giỏ hàng</a><i class="fa-solid fa-chevron-right small text-muted" aria-hidden="true"></i><span class="step-item active" aria-current="step"><span class="step-num">2</span> Thanh toán</span><i class="fa-solid fa-chevron-right small text-muted" aria-hidden="true"></i><span class="step-item"><span class="step-num">3</span> Hoàn tất</span></nav>
         <div class="row g-4">
             <!-- CỘT TRÁI: THÔNG TIN GIAO HÀNG & PHƯƠNG THỨC -->
             <div class="col-lg-7">
@@ -65,34 +66,39 @@
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Họ và tên người nhận <span class="text-danger">*</span></label>
+                            @if(($addresses ?? collect())->isNotEmpty())
+                            <label class="form-label" for="savedAddress">Địa chỉ đã lưu</label>
+                            <select id="savedAddress" class="form-select mb-2"><option value="">Nhập địa chỉ mới</option>@foreach($addresses as $address)<option value="{{ $address->id }}" data-name="{{ $address->recipient_name }}" data-phone="{{ $address->phone }}" data-address="{{ $address->address }}" data-district="{{ $address->district_id }}" data-ward="{{ $address->ward_code }}">{{ $address->label }} — {{ $address->recipient_name }} ({{ $address->phone }})</option>@endforeach</select>
+                            @endif
+                            <label class="form-label" for="fullname">Họ và tên người nhận <span class="text-danger">*</span></label>
                             <input type="text" id="fullname" class="form-control" placeholder="Nguyễn Văn A" value="{{ Auth::check() ? Auth::user()->name : '' }}" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                            <label class="form-label" for="phone">Số điện thoại <span class="text-danger">*</span></label>
                             <input type="tel" id="phone" class="form-control" placeholder="0912345678" value="{{ Auth::check() ? (Auth::user()->phone ?? '') : '' }}" required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Tỉnh / Thành phố <span class="text-danger">*</span></label>
+                            <label class="form-label" for="province_select">Tỉnh / Thành phố <span class="text-danger">*</span></label>
                             <select id="province_select" class="form-select">
                                 <option value="">-- Đang tải... --</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Quận / Huyện <span class="text-danger">*</span></label>
+                            <label class="form-label" for="district_select">Quận / Huyện <span class="text-danger">*</span></label>
                             <select id="district_select" class="form-select" disabled>
                                 <option value="">-- Chọn Quận/Huyện --</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Phường / Xã <span class="text-danger">*</span></label>
+                            <label class="form-label" for="ward_select">Phường / Xã <span class="text-danger">*</span></label>
                             <select id="ward_select" class="form-select" disabled>
                                 <option value="">-- Chọn Phường/Xã --</option>
                             </select>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Địa chỉ chi tiết (Số nhà, tên đường) <span class="text-danger">*</span></label>
+                            <label class="form-label" for="streetInput">Địa chỉ chi tiết (Số nhà, tên đường) <span class="text-danger">*</span></label>
                             <input type="text" id="streetInput" class="form-control" placeholder="Ví dụ: Số 25 ngõ 123 đường Cầu Giấy" required>
+                            <div class="mt-3"><label class="form-label" for="couponCode">Mã giảm giá</label><div class="input-group"><input id="couponCode" class="form-control" placeholder="Nhập mã nếu có"><button type="button" class="btn btn-outline-primary" onclick="applyCoupon()">Áp dụng</button></div><small id="couponMessage" class="text-muted"></small></div>
                         </div>
                     </div>
                 </div>
@@ -105,7 +111,7 @@
                     <!-- LỰA CHỌN 1: COD -->
                     <div class="payment-radio-box active" id="box_cod" onclick="setPayment('cod')">
                         <div class="d-flex align-items-center">
-                            <input type="radio" name="paymentMethod" id="pay_cod" value="cod" class="form-check-input me-3" checked>
+                            <input type="radio" name="paymentMethod" aria-label="Thanh toán khi nhận hàng" id="pay_cod" value="cod" class="form-check-input me-3" checked>
                             <div>
                                 <div class="fw-bold">Thanh toán khi nhận hàng (COD)</div>
                                 <div class="text-muted small">Thanh toán tiền mặt cho shipper khi nhận kiện hàng</div>
@@ -116,7 +122,7 @@
                     <!-- LỰA CHỌN 2: THẺ ATM NỘI ĐỊA (NAPAS) -->
                     <div class="payment-radio-box" id="box_momo_atm" onclick="setPayment('momo_atm')">
                         <div class="d-flex align-items-center">
-                            <input type="radio" name="paymentMethod" id="pay_momo_atm" value="momo_atm" class="form-check-input me-3">
+                            <input type="radio" name="paymentMethod" aria-label="Thanh toán bằng thẻ ATM" id="pay_momo_atm" value="momo_atm" class="form-check-input me-3">
                             <div>
                                 <div class="fw-bold text-primary">
                                     <i class="fa-solid fa-building-columns me-1"></i> Thẻ ATM Nội Địa / Internet Banking
@@ -129,7 +135,7 @@
                     <!-- LỰA CHỌN 3: THẺ QUỐC TẾ (VISA / MASTER / JCB) -->
                     <div class="payment-radio-box" id="box_momo_cc" onclick="setPayment('momo_cc')">
                         <div class="d-flex align-items-center">
-                            <input type="radio" name="paymentMethod" id="pay_momo_cc" value="momo_cc" class="form-check-input me-3">
+                            <input type="radio" name="paymentMethod" aria-label="Thanh toán bằng thẻ quốc tế" id="pay_momo_cc" value="momo_cc" class="form-check-input me-3">
                             <div>
                                 <div class="fw-bold text-success">
                                     <i class="fa-brands fa-cc-visa me-1"></i> Thẻ Quốc Tế (Visa / Mastercard / JCB)
@@ -179,11 +185,14 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
+    @include('partials.store-footer')
     <!-- JAVASCRIPT XỬ LÝ -->
     <script>
         const CHECKOUT_KEY = 'lar_accessories_checkout';
+        let selectedAddressId = '';
+        let appliedCouponCode = '';
 
         function getCheckoutItems() {
             try {
@@ -201,6 +210,14 @@
             const shippingFeeText = document.getElementById('shipping_fee_text');
             const finalTotalText = document.getElementById('final_total_text');
             const totalPriceInput = document.getElementById('total_price_input');
+            document.getElementById('savedAddress')?.addEventListener('change', function () {
+                selectedAddressId = this.value;
+                const option = this.selectedOptions[0];
+                if (!this.value) return;
+                document.getElementById('fullname').value = option.dataset.name || '';
+                document.getElementById('phone').value = option.dataset.phone || '';
+                document.getElementById('streetInput').value = option.dataset.address || '';
+            });
 
             const items = getCheckoutItems();
             if (items.length === 0) {
@@ -405,6 +422,8 @@
                 to_district_id: Number(distSelect.value),
                 to_ward_code: wardSelect.value,
                 payment_method: paymentMethod,
+                address_id: selectedAddressId || null,
+                coupon_code: appliedCouponCode || null,
                 cart_items: JSON.stringify(cartItems)
             };
 
@@ -482,6 +501,18 @@
                         text: err.message
                     });
                 });
+        }
+
+        function applyCoupon() {
+            const code = document.getElementById('couponCode')?.value.trim();
+            const message = document.getElementById('couponMessage');
+            if (!code) return;
+            fetch("{{ route('user.coupon.validate') }}", {
+                method: 'POST', headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                body: JSON.stringify({code, subtotal: getSubtotal()})
+            }).then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.message); return data; })
+              .then(data => { appliedCouponCode = data.code; if (message) message.textContent = `Đã áp dụng, giảm ${formatMoney(data.discount)}₫`; })
+              .catch(error => { appliedCouponCode = ''; if (message) message.textContent = error.message || 'Mã không hợp lệ'; });
         }
 
         function formatMoney(n) {
