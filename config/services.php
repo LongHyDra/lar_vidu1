@@ -53,5 +53,7 @@ return [
         'redirect_url' => env('MOMO_REDIRECT_URL'),
         'ipn_url' => env('MOMO_IPN_URL'),
     ],
-
+'resend' => [
+    'key' => env('RESEND_KEY'),
+],
 ];
