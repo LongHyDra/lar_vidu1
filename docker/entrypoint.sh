@@ -44,7 +44,9 @@ case "${RUN_SEEDERS:-false}" in
     *) echo "RUN_SEEDERS must be true or false" >&2; exit 1 ;;
 esac
 
-su-exec www-data php artisan route:cache
+if ! su-exec www-data php artisan route:cache; then
+    echo "Route cache skipped because one or more routes cannot be serialized." >&2
+fi
 su-exec www-data php artisan view:cache
 
 nginx -t
