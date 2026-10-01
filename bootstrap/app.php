@@ -10,7 +10,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware) {
+    ->withMiddleware(function (Middleware $middleware): void {
+        // Render terminates TLS at its reverse proxy and forwards the original
+        // scheme in X-Forwarded-Proto. Trust that proxy so generated URLs,
+        // redirects, CSRF and secure cookies use HTTPS externally.
+        $middleware->trustProxies(at: '*');
+
         // Loại trừ CSRF cho MoMo IPN
         $middleware->validateCsrfTokens(except: [
             'payment/momo/ipn',
