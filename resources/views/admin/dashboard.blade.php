@@ -609,15 +609,26 @@
         <div class="card-panel" data-dashboard-section="users">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="card-panel-title mb-0"><i class="fa-solid fa-users text-primary"></i> Quản lý người dùng</div>
-                <button type="button" class="btn btn-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#createUserModal">
-                    <i class="fa-solid fa-user-plus me-1"></i> Thêm tài khoản mới
-                </button>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <form id="dashboard-bulk-delete-form" action="{{ route('admin.users.bulk-destroy') }}" method="POST" class="d-inline">
+                        @csrf
+                        @method('DELETE')
+                        <span id="dashboard-selected-user-count" class="text-muted small me-2">Chưa chọn tài khoản nào</span>
+                        <button id="dashboard-bulk-delete-button" type="submit" class="btn btn-danger btn-sm fw-semibold" disabled>
+                            <i class="fa-solid fa-trash me-1"></i> Xóa đã chọn
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                        <i class="fa-solid fa-user-plus me-1"></i> Thêm tài khoản mới
+                    </button>
+                </div>
             </div>
 
             <div class="table-responsive">
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th class="text-center" style="width: 60px;"><input id="dashboard-select-all-users" type="checkbox" class="form-check-input" aria-label="Chọn tất cả tài khoản"></th>
                             <th style="width: 60px;">ID</th>
                             <th>Họ tên</th>
                             <th>Email</th>
@@ -630,6 +641,7 @@
                     <tbody>
                         @forelse($users as $user)
                         <tr>
+                            <td class="text-center"><input class="form-check-input dashboard-user-checkbox" type="checkbox" name="user_ids[]" value="{{ $user->id }}" form="dashboard-bulk-delete-form" aria-label="Chọn {{ $user->name }}" @disabled($user->id === auth()->id())></td>
                             <td>#{{ $user->id }}</td>
                             <td class="fw-bold">{{ $user->name }}</td>
                             <td>{{ $user->email }}</td>
@@ -667,7 +679,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">Chưa có người dùng nào.</td>
+                            <td colspan="8" class="text-center text-muted py-4">Chưa có người dùng nào.</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -931,6 +943,38 @@
             document.querySelectorAll('[data-dashboard-section]').forEach(function(element) {
                 element.style.display = element.dataset.dashboardSection === activeSection ? '' : 'none';
             });
+
+            const bulkDeleteForm = document.getElementById('dashboard-bulk-delete-form');
+            const selectAllUsers = document.getElementById('dashboard-select-all-users');
+            const userCheckboxes = Array.from(document.querySelectorAll('.dashboard-user-checkbox'));
+            const bulkDeleteButton = document.getElementById('dashboard-bulk-delete-button');
+            const selectedUserCount = document.getElementById('dashboard-selected-user-count');
+
+            if (bulkDeleteForm && selectAllUsers && bulkDeleteButton && selectedUserCount) {
+                const selectableUsers = () => userCheckboxes.filter(checkbox => !checkbox.disabled);
+                const selectedUsers = () => selectableUsers().filter(checkbox => checkbox.checked);
+                const updateBulkDeleteState = () => {
+                    const selected = selectedUsers().length;
+                    const total = selectableUsers().length;
+                    bulkDeleteButton.disabled = selected === 0;
+                    selectedUserCount.textContent = selected ? selected + ' tài khoản đã chọn' : 'Chưa chọn tài khoản nào';
+                    selectAllUsers.checked = total > 0 && selected === total;
+                    selectAllUsers.indeterminate = selected > 0 && selected < total;
+                };
+
+                selectAllUsers.addEventListener('change', () => {
+                    selectableUsers().forEach(checkbox => { checkbox.checked = selectAllUsers.checked; });
+                    updateBulkDeleteState();
+                });
+                userCheckboxes.forEach(checkbox => checkbox.addEventListener('change', updateBulkDeleteState));
+                bulkDeleteForm.addEventListener('submit', event => {
+                    const selected = selectedUsers().length;
+                    if (!selected || !window.confirm('Bạn có chắc muốn xóa ' + selected + ' tài khoản đã chọn? Dữ liệu liên quan có thể bị xóa theo database.')) {
+                        event.preventDefault();
+                    }
+                });
+                updateBulkDeleteState();
+            }
 
             const toggleBtn = document.getElementById('chat-toggle');
             const chatPopup = document.getElementById('chat-popup');
