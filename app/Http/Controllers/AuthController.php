@@ -44,13 +44,13 @@ class AuthController extends Controller
 
             return redirect()->back()
                 ->withInput($request->except(['password', 'password_confirmation']))
-                ->with('error', 'Dang ky that bai. Vui long thu lai.');
+                ->with('error', 'Đăng ký thất bại. Vui lòng thử lại.');
         }
 
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('welcome')->with('success', 'Tai khoan da duoc tao thanh cong.');
+        return redirect()->route('welcome')->with('success', 'Tài khoản đã được tạo thành công.');
     }
 
     public function showLoginForm()
@@ -75,7 +75,7 @@ class AuthController extends Controller
             return redirect()->intended(route('welcome'));
         }
 
-        return redirect()->back()->with('error', 'Email hoac mat khau khong chinh xac.');
+        return redirect()->back()->with('error', 'Email hoặc mật khẩu không chính xác.');
     }
 
     public function logout(Request $request)
@@ -84,7 +84,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with('info', 'Ban da dang xuat thanh cong.');
+        return redirect()->route('login')->with('info', 'Bạn đã đăng xuất thành công.');
     }
 
     public function showForgotPasswordForm()
@@ -98,7 +98,7 @@ class AuthController extends Controller
         $status = Password::sendResetLink($request->only('email'));
 
         return $status === Password::RESET_LINK_SENT
-            ? back()->with('success', 'Duong dan dat lai mat khau da duoc gui vao hom thu cua ban!')
+            ? back()->with('success', 'Đường dẫn đặt lại mật khẩu đã được gửi vào hòm thư của bạn!')
             : back()->withErrors(['email' => __($status)]);
     }
 
@@ -131,7 +131,7 @@ class AuthController extends Controller
         );
 
         return $status === Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('success', 'Mat khau da duoc dat lai thanh cong. Vui long dang nhap bang mat khau moi!')
+            ? redirect()->route('login')->with('success', 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập bằng mật khẩu mới!')
             : back()->withErrors(['email' => __($status)]);
     }
 }
