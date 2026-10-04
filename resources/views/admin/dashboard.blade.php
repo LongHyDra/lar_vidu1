@@ -944,6 +944,10 @@
 
             let currentUserId = null;
 
+            const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'
+            }[character]));
+
             const loadUsers = () => {
                 fetch('{{ route("admin.chat.users") }}')
                     .then(res => res.json())
@@ -959,7 +963,7 @@
                             const active = Number(currentUserId) === Number(user.id) ? 'active' : '';
                             html += `
                             <div class="user-item p-2 border-bottom ${active}" data-user-id="${user.id}" style="cursor:pointer; background:${active ? '#e0f2fe' : '#fff'};">
-                                <strong>${user.name}</strong>${user.unread_count ? `<span class="badge bg-danger ms-1">${user.unread_count}</span>` : ''}
+                                <strong>${escapeHtml(user.name)}</strong><small class="text-muted d-block">${escapeHtml(user.email)}</small>${user.unread_count ? `<span class="badge bg-danger ms-1">${user.unread_count} tin mới</span>` : ''}
                             </div>
                         `;
                         });
@@ -993,7 +997,7 @@
                             const isMine = Number(msg.sender_id) === Number('{{ Auth::id() }}');
                             const senderName = isMine ? 'Bạn' : (msg.sender?.name || 'Khách hàng');
                             const color = isMine ? '#2563eb' : '#111827';
-                            html += `<div class="mb-2" style="color:${color};"><strong>${senderName}:</strong> ${msg.content}</div>`;
+                            html += `<div class="mb-2" style="color:${color};"><strong>${escapeHtml(senderName)}:</strong> ${escapeHtml(msg.content)}</div>`;
                         });
                         chatMessages.innerHTML = html || '<div class="text-center mt-5 text-muted">Chưa có tin nhắn nào</div>';
                         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1023,6 +1027,7 @@
                 .then(() => {
                     chatInput.value = '';
                     loadMessages();
+                    loadUsers();
                 });
             };
 
@@ -1039,6 +1044,18 @@
             chatInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') sendMessage();
             });
+
+            if (window.location.hash === '#admin-chat-box') {
+                chatPopup.style.display = 'block';
+                loadUsers();
+            }
+
+            setInterval(() => {
+                if (chatPopup.style.display === 'block') {
+                    loadUsers();
+                    if (currentUserId) loadMessages();
+                }
+            }, 3000);
         });
     </script>
 </body>
