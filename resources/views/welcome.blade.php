@@ -597,7 +597,7 @@
         </div>
         <div class="container">
             <nav class="store-nav" aria-label="Điều hướng cửa hàng">
-                <span class="nav-label"><i class="fa-solid fa-bars me-2" aria-hidden="true"></i> KHÁM PHÁ 247</span>
+                <a href="#catalog" class="nav-label text-decoration-none"><i class="fa-solid fa-bars me-2" aria-hidden="true"></i> KHÁM PHÁ 247</a>
                 <a href="#catalog">Tất cả sản phẩm</a>
                 <a href="{{ route('user.orders.index') }}">Đơn hàng của tôi</a>
                 <a href="{{ route('faq') }}">Hướng dẫn mua hàng</a>
@@ -964,6 +964,10 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             updateHeaderCart();
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('q') || params.has('min_price') || params.has('max_price') || params.has('category') || params.has('availability')) {
+                document.getElementById('catalog')?.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }
         });
     </script>
 </body>

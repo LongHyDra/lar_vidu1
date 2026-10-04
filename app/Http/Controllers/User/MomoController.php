@@ -7,6 +7,8 @@ use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\PaymentTransaction;
+use App\Models\Coupon;
+use App\Models\CouponRedemption;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\GHNOrderService;
@@ -214,9 +216,25 @@ class MomoController extends Controller
             }
             Order::lockForUpdate()->findOrFail($transaction->order_id);
             $transaction = PaymentTransaction::lockForUpdate()->findOrFail($transaction->id);
+            $order = Order::lockForUpdate()->findOrFail($transaction->order_id);
             if ($transaction->status !== 'paid') {
                 $momo->markFailed($transaction, $payload);
+                $this->releaseCouponReservation($order);
             }
         });
+    }
+
+    private function releaseCouponReservation(Order $order): void
+    {
+        $redemption = CouponRedemption::where('order_id', $order->id)->lockForUpdate()->first();
+        if (! $redemption) {
+            return;
+        }
+
+        $coupon = Coupon::lockForUpdate()->find($redemption->coupon_id);
+        $redemption->delete();
+        if ($coupon && $coupon->used_count > 0) {
+            $coupon->decrement('used_count');
+        }
     }
 }

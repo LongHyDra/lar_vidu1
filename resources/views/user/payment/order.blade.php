@@ -73,6 +73,7 @@
                             'failed' => 'Thất bại',
                             'refund_pending' => 'Chờ hoàn tiền',
                             'refunded' => 'Đã hoàn tiền',
+                            'payment_review' => 'Đang kiểm tra thanh toán',
                         ];
                         @endphp
 
@@ -81,7 +82,7 @@
                             $status = $order->status ?? 'pending';
                             $badgeClass = match($status) {
                                 'paid', 'cod_paid', 'delivered', 'refunded' => 'text-bg-success',
-                                'cancelled', 'failed' => 'text-bg-danger',
+                                'cancelled', 'failed', 'payment_review' => 'text-bg-danger',
                                 'shipping' => 'text-bg-info text-white',
                                 'confirmed', 'packaging', 'refund_pending' => 'text-bg-primary',
                                 default => 'text-bg-warning text-dark'

@@ -395,16 +395,41 @@
         const CART_KEY = 'lar_accessories_cart';
         const CHECKOUT_KEY = 'lar_accessories_checkout';
 
+        function cartItemKey(item) {
+            return `${Number(item.id || 0)}:${Number(item.variant_id || 0)}`;
+        }
+
+        function normalizeCart(items) {
+            const map = new Map();
+            (Array.isArray(items) ? items : []).forEach(item => {
+                const normalized = {
+                    ...item,
+                    id: Number(item.id || 0),
+                    variant_id: item.variant_id ? Number(item.variant_id) : null,
+                    quantity: Math.max(1, Number(item.quantity || 1)),
+                    checked: item.checked !== false,
+                };
+                if (normalized.id <= 0) return;
+                const key = cartItemKey(normalized);
+                const current = map.get(key);
+                map.set(key, current
+                    ? { ...normalized, quantity: Math.max(current.quantity, normalized.quantity), checked: current.checked || normalized.checked }
+                    : normalized);
+            });
+            return [...map.values()];
+        }
+
         function getCart() {
             try {
                 const stored = localStorage.getItem(CART_KEY);
-                return stored ? JSON.parse(stored) : [];
+                return normalizeCart(stored ? JSON.parse(stored) : []);
             } catch(e) { return []; }
         }
 
         function saveCart(cart) {
-            localStorage.setItem(CART_KEY, JSON.stringify(cart));
-            window.dispatchEvent(new CustomEvent('cart:changed', { detail: { items: cart } }));
+            const normalized = normalizeCart(cart);
+            localStorage.setItem(CART_KEY, JSON.stringify(normalized));
+            window.dispatchEvent(new CustomEvent('cart:changed', { detail: { items: normalized } }));
             renderCart();
         }
 

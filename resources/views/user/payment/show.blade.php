@@ -7,7 +7,7 @@
     <div class="card">
         <div class="header">
             <h1>Đơn hàng #{{ $order->id }}</h1>
-            @php($statusLabels = ['pending' => 'Chờ xác nhận', 'confirmed' => 'Đã xác nhận', 'packaging' => 'Đang đóng gói', 'shipping' => 'Đang vận chuyển', 'delivered' => 'Đã giao', 'cancelled' => 'Đã hủy', 'cod_ordered' => 'Đã tạo vận đơn'])
+            @php($statusLabels = ['pending' => 'Chờ xác nhận', 'confirmed' => 'Đã xác nhận', 'packaging' => 'Đang đóng gói', 'shipping' => 'Đang vận chuyển', 'delivered' => 'Đã giao', 'cancelled' => 'Đã hủy', 'cod_ordered' => 'Đã tạo vận đơn', 'cod_paid' => 'Đã thu tiền COD', 'paid' => 'Đã thanh toán', 'payment_review' => 'Đang kiểm tra thanh toán', 'failed' => 'Thanh toán thất bại', 'refund_pending' => 'Chờ hoàn tiền', 'refunded' => 'Đã hoàn tiền'])
             <span class="badge badge-{{ $order->status ?? 'pending' }}">{{ $statusLabels[$order->status] ?? $order->status }}</span>
         </div>
 

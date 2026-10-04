@@ -203,19 +203,23 @@ class OrderController extends Controller
                 $productId = (int) ($item['id'] ?? 0);
                 $quantity = (int) ($item['quantity'] ?? 0);
                 $product = $products->get($productId);
-                $variant = ! empty($item['variant_id']) ? $variants->get((int) $item['variant_id']) : null;
+                $variantId = ! empty($item['variant_id']) ? (int) $item['variant_id'] : null;
+                $variant = $variantId ? $variants->get($variantId) : null;
 
                 if (! $product) {
                     throw ValidationException::withMessages(['cart_items' => "Sản phẩm ID #{$productId} không tồn tại."]);
                 }
 
-                if ($variant && $variant->product_id !== $product->id) {
+                if ($variantId && (! $variant || $variant->product_id !== $product->id)) {
                     throw ValidationException::withMessages(['cart_items' => 'Phiên bản sản phẩm không hợp lệ.']);
+                }
+                if (! $variantId && ProductVariant::where('product_id', $product->id)->exists()) {
+                    throw ValidationException::withMessages(['cart_items' => "Vui lòng chọn phiên bản cho sản phẩm \"{$product->name}\"."]);
                 }
                 $availableStock = $variant ? $variant->stock : $product->stock;
                 if ($quantity <= 0 || $availableStock < $quantity) {
                     throw ValidationException::withMessages([
-                        'cart_items' => "Sản phẩm \"{$product->name}\" không đủ hàng trong kho (Còn: {$product->stock}).",
+                        'cart_items' => "Sản phẩm \"{$product->name}\" không đủ hàng trong kho (Còn: {$availableStock}).",
                     ]);
                 }
 
@@ -323,6 +327,8 @@ class OrderController extends Controller
                 ]);
             }
 
+            $this->releaseCouponReservation($order);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Lỗi kết nối cổng thanh toán thẻ: '.($momoResult['message'] ?? 'Không lấy được đường dẫn thanh toán.'),
@@ -395,5 +401,21 @@ class OrderController extends Controller
         $decoded = json_decode((string) $rawItems, true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function releaseCouponReservation(Order $order): void
+    {
+        DB::transaction(function () use ($order) {
+            $redemption = CouponRedemption::where('order_id', $order->id)->lockForUpdate()->first();
+            if (! $redemption) {
+                return;
+            }
+
+            $coupon = Coupon::lockForUpdate()->find($redemption->coupon_id);
+            $redemption->delete();
+            if ($coupon && $coupon->used_count > 0) {
+                $coupon->decrement('used_count');
+            }
+        });
     }
 }
