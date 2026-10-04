@@ -87,6 +87,13 @@
                 @forelse($relatedProducts as $related)
                     <div class="col-6 col-md-3">
                         <div class="mini-product">
+                            <a href="{{ route('products.show', $related) }}" class="mini-product-image" aria-label="Xem {{ $related->name }}">
+                                @if($related->image)
+                                    <img src="{{ asset($related->image) }}" alt="{{ $related->name }}" loading="lazy">
+                                @else
+                                    <i class="fa-solid fa-motorcycle" aria-hidden="true"></i>
+                                @endif
+                            </a>
                             <small class="text-muted">{{ $related->category->name ?? 'Phụ kiện' }}</small>
                             <a class="d-block mt-2" href="{{ route('products.show', $related) }}">{{ $related->name }}</a>
                             <div class="text-primary fw-bold mt-3">{{ number_format($related->price, 0, ',', '.') }}₫</div>
@@ -104,6 +111,13 @@
                 @forelse($popularProducts as $popular)
                     <div class="col-6 col-md-3">
                         <div class="mini-product">
+                            <a href="{{ route('products.show', $popular) }}" class="mini-product-image" aria-label="Xem {{ $popular->name }}">
+                                @if($popular->image)
+                                    <img src="{{ asset($popular->image) }}" alt="{{ $popular->name }}" loading="lazy">
+                                @else
+                                    <i class="fa-solid fa-motorcycle" aria-hidden="true"></i>
+                                @endif
+                            </a>
                             <a href="{{ route('products.show', $popular) }}">{{ $popular->name }}</a>
                             <div class="text-primary fw-bold mt-3">{{ number_format($popular->price, 0, ',', '.') }}₫</div>
                         </div>
