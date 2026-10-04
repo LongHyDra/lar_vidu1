@@ -73,4 +73,33 @@ class UserController extends Controller
         return redirect()->route('admin.dashboard', ['section' => 'users'])
             ->with('success', 'Đã xóa tài khoản thành công.');
     }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_ids' => ['required', 'array', 'min:1'],
+            'user_ids.*' => ['integer', 'distinct', 'exists:users,id'],
+        ]);
+
+        $ids = collect($validated['user_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn (int $id) => $id === (int) Auth::id())
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return back()->with('error', 'Không thể xóa tài khoản đang đăng nhập.');
+        }
+
+        $users = User::whereIn('id', $ids)->get();
+        $deleted = 0;
+
+        foreach ($users as $user) {
+            if ($user->delete()) {
+                $deleted++;
+            }
+        }
+
+        return redirect()->route('admin.users.index')
+            ->with('success', "Đã xóa {$deleted} tài khoản được chọn.");
+    }
 }
