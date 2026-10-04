@@ -67,17 +67,28 @@ class AuthRegistrationTest extends TestCase
         $this->assertNotNull($user->fresh()->email_verified_at);
     }
 
-    public function test_unverified_user_can_login_but_checkout_requires_verification(): void
+    public function test_unverified_user_cannot_login(): void
     {
         $user = User::factory()->unverified()->create(['password' => bcrypt('password')]);
 
         $this->post(route('login'), [
             'email' => $user->email,
             'password' => 'password',
-        ])->assertRedirect(route('welcome'));
+        ])->assertRedirect(route('login'))
+            ->assertSessionHas('warning');
 
-        $this->assertAuthenticatedAs($user);
-        $this->get(route('checkout.index'))
-            ->assertRedirect(route('verification.notice'));
+        $this->assertGuest();
+    }
+
+    public function test_guest_can_request_a_new_verification_email(): void
+    {
+        Notification::fake();
+        $user = User::factory()->unverified()->create(['email' => 'unverified@example.com']);
+
+        $this->post(route('verification.resend'), ['email' => $user->email])
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('success');
+
+        Notification::assertSentTo($user, VerifyEmail::class);
     }
 }

@@ -83,6 +83,16 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($request->only('email', 'password'))) {
+            if (! Auth::user()->hasVerifiedEmail()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')
+                    ->withInput($request->only('email'))
+                    ->with('warning', 'Bạn cần xác nhận email trước khi đăng nhập. Nếu chưa nhận được email, hãy gửi lại link xác thực.');
+            }
+
             $request->session()->regenerate();
             if (Auth::user()->role === 'admin') {
                 return redirect()->intended(route('admin.dashboard'));
@@ -91,6 +101,27 @@ class AuthController extends Controller
         }
 
         return redirect()->back()->with('error', 'Email hoặc mật khẩu không chính xác.');
+    }
+
+    public function resendVerification(Request $request)
+    {
+        $data = $request->validate(['email' => ['required', 'email']]);
+        $user = User::where('email', $data['email'])->first();
+
+        if ($user && ! $user->hasVerifiedEmail()) {
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (Throwable $e) {
+                Log::error('Verification email resend failed for guest.', [
+                    'user_id' => $user->id,
+                    'exception' => $e,
+                ]);
+
+                return redirect()->route('login')->withInput()->with('warning', 'Không thể gửi email xác thực lúc này. Vui lòng thử lại sau.');
+            }
+        }
+
+        return redirect()->route('login')->withInput()->with('success', 'Nếu email tồn tại và chưa xác nhận, link xác thực mới đã được gửi.');
     }
 
     public function logout(Request $request)

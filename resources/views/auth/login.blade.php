@@ -24,6 +24,12 @@
             </div>
         @endif
 
+        @if (session('warning'))
+            <div class="alert alert-warning border-0 small mb-3">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i> {{ session('warning') }}
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="alert alert-danger border-0 small mb-3">
                 <ul class="mb-0 ps-3">
@@ -60,6 +66,15 @@
             <button type="submit" class="btn btn-login">
                 <i class="fa-solid fa-right-to-bracket me-1"></i> Đăng Nhập
             </button>
+        </form>
+
+        <form action="{{ route('verification.resend') }}" method="POST" class="mt-3">
+            @csrf
+            <label for="verification_email" class="form-label small text-muted">Chưa nhận được email xác thực?</label>
+            <div class="input-group">
+                <input type="email" name="email" id="verification_email" class="form-control" value="{{ old('email') }}" placeholder="name@example.com" required>
+                <button type="submit" class="btn btn-outline-primary">Gửi lại link</button>
+            </div>
         </form>
 
         <div class="register-link">

@@ -139,6 +139,7 @@ Route::middleware('guest')->group(function () {
     Route::post('register', [AuthController::class, 'register'])->middleware('throttle:5,1');
     Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+    Route::post('email/resend', [AuthController::class, 'resendVerification'])->middleware('throttle:3,1')->name('verification.resend');
 
     // QUÊN VÀ ĐẶT LẠI MẬT KHẨU
     Route::get('forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
