@@ -23,8 +23,8 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|string|email|max:255|unique:users',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -33,41 +33,24 @@ class AuthController extends Controller
 
             $user = DB::transaction(function () use ($request) {
                 return User::create([
-                    'name'     => $request->name,
-                    'email'    => $request->email,
+                    'name' => $request->name,
+                    'email' => $request->email,
                     'password' => Hash::make($request->password),
-                    'role'     => 'customer',
+                    'role' => 'customer',
                 ]);
             });
-
         } catch (Throwable $e) {
             Log::error('Registration failed while creating user.', ['exception' => $e]);
+
             return redirect()->back()
                 ->withInput($request->except(['password', 'password_confirmation']))
-                ->with('error', 'Đăng ký thất bại. Vui lòng thử lại.');
+                ->with('error', 'Dang ky that bai. Vui long thu lai.');
         }
 
         Auth::login($user);
         $request->session()->regenerate();
 
-        try {
-            $user->sendEmailVerificationNotification();
-
-            return redirect()->route('verification.notice')->with(
-                'success',
-                'Tài khoản đã được tạo. Link xác thực đã được gửi đến email của bạn.'
-            );
-        } catch (Throwable $e) {
-            Log::error('Verification email failed after successful registration.', [
-                'user_id' => $user->id,
-                'exception' => $e,
-            ]);
-
-            return redirect()->route('verification.notice')->with(
-                'warning',
-                'Tài khoản đã được tạo nhưng chưa gửi được email xác thực. Vui lòng bấm Gửi lại link.'
-            );
-        }
+        return redirect()->route('welcome')->with('success', 'Tai khoan da duoc tao thanh cong.');
     }
 
     public function showLoginForm()
@@ -78,50 +61,21 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|string|email',
+            'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
 
         if (Auth::attempt($request->only('email', 'password'))) {
-            if (! Auth::user()->hasVerifiedEmail()) {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-
-                return redirect()->route('login')
-                    ->withInput($request->only('email'))
-                    ->with('warning', 'Bạn cần xác nhận email trước khi đăng nhập. Nếu chưa nhận được email, hãy gửi lại link xác thực.');
-            }
-
             $request->session()->regenerate();
+
             if (Auth::user()->role === 'admin') {
                 return redirect()->intended(route('admin.dashboard'));
             }
+
             return redirect()->intended(route('welcome'));
         }
 
-        return redirect()->back()->with('error', 'Email hoặc mật khẩu không chính xác.');
-    }
-
-    public function resendVerification(Request $request)
-    {
-        $data = $request->validate(['email' => ['required', 'email']]);
-        $user = User::where('email', $data['email'])->first();
-
-        if ($user && ! $user->hasVerifiedEmail()) {
-            try {
-                $user->sendEmailVerificationNotification();
-            } catch (Throwable $e) {
-                Log::error('Verification email resend failed for guest.', [
-                    'user_id' => $user->id,
-                    'exception' => $e,
-                ]);
-
-                return redirect()->route('login')->withInput()->with('warning', 'Không thể gửi email xác thực lúc này. Vui lòng thử lại sau.');
-            }
-        }
-
-        return redirect()->route('login')->withInput()->with('success', 'Nếu email tồn tại và chưa xác nhận, link xác thực mới đã được gửi.');
+        return redirect()->back()->with('error', 'Email hoac mat khau khong chinh xac.');
     }
 
     public function logout(Request $request)
@@ -130,7 +84,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with('info', 'Bạn đã đăng xuất thành công.');
+        return redirect()->route('login')->with('info', 'Ban da dang xuat thanh cong.');
     }
 
     public function showForgotPasswordForm()
@@ -141,11 +95,10 @@ class AuthController extends Controller
     public function sendResetLinkEmail(Request $request)
     {
         $request->validate(['email' => 'required|email']);
-
         $status = Password::sendResetLink($request->only('email'));
 
         return $status === Password::RESET_LINK_SENT
-            ? back()->with('success', 'Đường dẫn đặt lại mật khẩu đã được gửi vào hòm thư của bạn!')
+            ? back()->with('success', 'Duong dan dat lai mat khau da duoc gui vao hom thu cua ban!')
             : back()->withErrors(['email' => __($status)]);
     }
 
@@ -160,8 +113,8 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'token'    => 'required',
-            'email'    => 'required|email',
+            'token' => 'required',
+            'email' => 'required|email',
             'password' => 'required|min:8|confirmed',
         ]);
 
@@ -173,13 +126,12 @@ class AuthController extends Controller
                 ])->setRememberToken(Str::random(60));
 
                 $user->save();
-
                 event(new PasswordReset($user));
             }
         );
 
         return $status === Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('success', 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập bằng mật khẩu mới!')
+            ? redirect()->route('login')->with('success', 'Mat khau da duoc dat lai thanh cong. Vui long dang nhap bang mat khau moi!')
             : back()->withErrors(['email' => __($status)]);
     }
 }

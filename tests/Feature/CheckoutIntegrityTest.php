@@ -74,14 +74,6 @@ class CheckoutIntegrityTest extends TestCase
         return ['orderId' => 'test-'.$order->id, 'amount' => $order->total_price, 'resultCode' => 0, 'transId' => 'test'];
     }
 
-    public function test_unverified_customer_cannot_checkout(): void
-    {
-        $user = User::factory()->unverified()->create();
-        $this->actingAs($user)->postJson(route('user.payment.process'), [])->assertForbidden();
-        $this->assertDatabaseCount('orders', 0);
-        Http::assertNothingSent();
-    }
-
     public function test_duplicate_cart_lines_cannot_exceed_stock(): void
     {
         $product = $this->product();

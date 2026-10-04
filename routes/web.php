@@ -188,9 +188,7 @@ Route::middleware('auth')->group(function () {
     })->middleware('throttle:6,1')->name('verification.send');
 
     // CHECKOUT BẮT BUỘC ĐÃ XÁC THỰC EMAIL
-    Route::get('/checkout', fn() => view('checkout.index'))
-        ->middleware('verified')
-        ->name('checkout.index');
+    Route::get('/checkout', fn() => view('checkout.index'))->name('checkout.index');
 
     // USER ROUTES
     Route::prefix('user')->name('user.')->group(function () {
@@ -216,8 +214,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/tickets/create', [UserTicketController::class, 'create'])->name('tickets.create');
         Route::post('/tickets', [UserTicketController::class, 'store'])->name('tickets.store');
 
-        Route::get('/payment', [OrderController::class, 'index'])->middleware('verified')->name('payment.index');
-        Route::post('/payment/process', [OrderController::class, 'processPayment'])->middleware('verified')->name('payment.process');
+        Route::get('/payment', [OrderController::class, 'index'])->name('payment.index');
+        Route::post('/payment/process', [OrderController::class, 'processPayment'])->name('payment.process');
         Route::get('/orders', [OrderController::class, 'orderHistory'])->name('orders.index');
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
