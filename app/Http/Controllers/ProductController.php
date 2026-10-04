@@ -42,7 +42,8 @@ class ProductController extends Controller
             ->limit(4)
             ->get());
 
-        return view('products.show', compact('product', 'relatedProducts', 'popularProducts'));
+        return view('products.show', compact('product', 'relatedProducts', 'popularProducts'))
+            ->with('cartCountId', 'detailCartCount');
     }
 
     public function create()
