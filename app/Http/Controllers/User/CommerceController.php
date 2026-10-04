@@ -43,7 +43,9 @@ class CommerceController extends Controller
                 ->groupBy(fn ($item) => $item['id'].':'.($item['variant_id'] ?? 0))
                 ->map(function ($group) {
                     $item = $group->first();
-                    $item['quantity'] = min(100000, $group->sum('quantity'));
+                    // PUT is a replacement snapshot. Duplicate lines from a repeated
+                    // frontend request must not turn into an implicit quantity increment.
+                    $item['quantity'] = min(100000, $group->max('quantity'));
 
                     return $item;
                 })

@@ -77,16 +77,16 @@ class CommerceUpgradeTest extends TestCase
         $this->actingAs($user)->putJson(route('user.cart.sync'), ['items' => $payload])
             ->assertOk()
             ->assertJsonCount(2, 'items')
-            ->assertJsonPath('items.0.quantity', 3);
+            ->assertJsonPath('items.0.quantity', 2);
 
         $this->actingAs($user)->putJson(route('user.cart.sync'), ['items' => $payload])
             ->assertOk()
             ->assertJsonCount(2, 'items')
-            ->assertJsonPath('items.0.quantity', 3);
+            ->assertJsonPath('items.0.quantity', 2);
 
         $items = $user->cart->fresh()->items;
         $this->assertCount(2, $items);
-        $this->assertSame(3, $items[0]['quantity']);
+        $this->assertSame(2, $items[0]['quantity']);
     }
 
     public function test_sitemap_is_public(): void

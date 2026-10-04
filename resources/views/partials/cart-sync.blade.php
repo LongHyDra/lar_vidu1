@@ -1,5 +1,8 @@
 <script>
 (() => {
+    if (window.__cartSyncInitialized) return;
+    window.__cartSyncInitialized = true;
+
     const key = 'lar_accessories_cart';
     const ownerKey = `${key}:owner`;
     const userId = String(@json(Auth::id()));
@@ -37,7 +40,7 @@
 
             const current = map.get(itemKey(normalized));
             map.set(itemKey(normalized), current
-                ? {...normalized, quantity: Math.min(100000, current.quantity + normalized.quantity)}
+                ? {...normalized, quantity: Math.max(current.quantity, normalized.quantity)}
                 : normalized);
         });
 
@@ -45,7 +48,17 @@
     };
 
     const serialize = items => JSON.stringify(normalize(items));
-    const merge = (remote, local) => normalize([...remote, ...local]);
+    const merge = (remote, local) => {
+        const map = new Map();
+        [...normalize(remote), ...normalize(local)].forEach(item => {
+            const key = itemKey(item);
+            const current = map.get(key);
+            map.set(key, current
+                ? {...item, quantity: Math.min(100000, current.quantity + item.quantity)}
+                : item);
+        });
+        return [...map.values()];
+    };
 
     const request = (method, items) => fetch('{{ route("user.cart.sync") }}', {
         method,
