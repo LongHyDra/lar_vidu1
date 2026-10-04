@@ -573,7 +573,7 @@
                                 <li><a class="dropdown-item fw-semibold" href="{{ route('user.profile') }}"><i class="fa-solid fa-user-pen me-2 text-primary"></i>Hồ sơ cá nhân</a></li>
                                 <li><button type="button" class="dropdown-item fw-semibold" data-bs-toggle="modal" data-bs-target="#wishlistModal"><i class="fa-solid fa-heart me-2 text-danger"></i>Sản phẩm yêu thích</button></li>
                                 <li><a class="dropdown-item fw-semibold" href="{{ route('user.orders.index') }}"><i class="fa-solid fa-receipt me-2 text-primary"></i>Lịch sử đơn hàng</a></li>
-                                <li><a class="dropdown-item fw-semibold" href="{{ route('user.tickets.index') }}"><i class="fa-solid fa-life-ring me-2 text-primary"></i>Yêu cầu hỗ trợ</a></li>
+                                <li><a class="dropdown-item fw-semibold" href="#chat-box"><i class="fa-solid fa-comments me-2 text-primary"></i>Chat trực tuyến</a></li>
                                 <li><a class="dropdown-item fw-semibold" href="{{ route('faq') }}"><i class="fa-solid fa-circle-question me-2 text-primary"></i>Câu hỏi thường gặp</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 @if(Auth::user()->isAdmin() || Auth::user()->isEditor() || Auth::user()->isManager())
@@ -601,7 +601,7 @@
                 <a href="#catalog">Tất cả sản phẩm</a>
                 <a href="{{ route('user.orders.index') }}">Đơn hàng của tôi</a>
                 <a href="{{ route('faq') }}">Hướng dẫn mua hàng</a>
-                <a href="{{ route('user.tickets.index') }}">Liên hệ hỗ trợ</a>
+                <a href="#chat-box">Chat trực tuyến</a>
             </nav>
         </div>
     </header>
@@ -869,29 +869,6 @@
         </div>
     @endauth
 
-    @auth
-        <div id="chat-box" style="position: fixed; right: 24px; bottom: 24px; z-index: 1040;">
-            <button id="chat-toggle" type="button" class="btn btn-primary rounded-circle shadow" style="width:62px; height:62px; font-size:1.5rem;">
-                <i class="fa-solid fa-comment-dots"></i>
-            </button>
-            <div id="chat-popup" class="card shadow-lg" style="display:none; width:340px; position:absolute; right:0; bottom:74px; border-radius:14px; overflow:hidden;">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <span>Hỗ trợ khách hàng</span>
-                    <button id="chat-close" type="button" class="btn btn-sm btn-light">X</button>
-                </div>
-                <div id="chat-messages" style="height:260px; overflow-y:auto; padding:14px; background:#fff;">
-                    <small class="text-muted">Đang tải lịch sử...</small>
-                </div>
-                <div class="card-footer bg-white">
-                    <div class="input-group">
-                        <input type="text" id="chat-input" class="form-control" placeholder="Nhập tin nhắn..." autocomplete="off">
-                        <button id="send-btn" type="button" class="btn btn-success">Gửi</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endauth
-
     <!-- FOOTER -->
     @include('partials.store-footer')
 
@@ -986,83 +963,6 @@
         });
 
         document.addEventListener('DOMContentLoaded', function () {
-            const chatToggle = document.getElementById('chat-toggle');
-            const chatPopup = document.getElementById('chat-popup');
-            const chatClose = document.getElementById('chat-close');
-            const chatMessages = document.getElementById('chat-messages');
-            const chatInput = document.getElementById('chat-input');
-            const sendBtn = document.getElementById('send-btn');
-
-            if (chatToggle && chatPopup && chatMessages && chatInput && sendBtn) {
-                const loadMessages = () => {
-                    fetch('{{ route("user.chat.messages") }}')
-                        .then(res => res.json())
-                        .then(messages => {
-                            let html = '';
-                            if (!messages.length) {
-                                html = "<div class='text-center text-muted'><small>Bắt đầu cuộc trò chuyện với Admin</small></div>";
-                            }
-
-                            messages.forEach(msg => {
-                                const isMe = Number(msg.sender_id) === Number('{{ Auth::id() }}');
-                                html += `
-                                    <div class="mb-2">
-                                        <strong>${isMe ? 'Bạn' : 'Admin'}:</strong> ${msg.content}
-                                    </div>
-                                `;
-                            });
-
-                            chatMessages.innerHTML = html;
-                            chatMessages.scrollTop = chatMessages.scrollHeight;
-                        })
-                        .catch(() => {
-                            chatMessages.innerHTML = '<small class="text-danger">Không thể tải tin nhắn</small>';
-                        });
-                };
-
-                const sendMessage = () => {
-                    const message = chatInput.value.trim();
-                    if (!message) return;
-
-                    fetch('{{ route("user.chat.send") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ message })
-                    }).then(() => {
-                        chatInput.value = '';
-                        loadMessages();
-                    });
-                };
-
-                chatToggle.addEventListener('click', () => {
-                    chatPopup.style.display = chatPopup.style.display === 'none' ? 'block' : 'none';
-                    if (chatPopup.style.display === 'block') {
-                        loadMessages();
-                    }
-                });
-
-                chatClose.addEventListener('click', () => {
-                    chatPopup.style.display = 'none';
-                });
-
-                sendBtn.addEventListener('click', sendMessage);
-                chatInput.addEventListener('keydown', function (event) {
-                    if (event.key === 'Enter') {
-                        sendMessage();
-                    }
-                });
-
-                setInterval(() => {
-                    if (chatPopup.style.display === 'block') {
-                        loadMessages();
-                    }
-                }, 3000);
-            }
-
             updateHeaderCart();
         });
     </script>

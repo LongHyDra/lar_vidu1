@@ -29,7 +29,7 @@
             @yield('content')
         @endif
     </main>
-    @include('partials.store-footer-content')
+    @include('partials.store-footer')
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/account-admin.js') }}" defer></script>
     @stack('scripts')

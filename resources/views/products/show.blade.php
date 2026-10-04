@@ -69,7 +69,7 @@
                         <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                         {{ $product->stock > 0 ? 'Thêm vào giỏ hàng' : 'Tạm hết hàng' }}
                     </button>
-                    <a href="{{ route('user.tickets.create') }}" class="btn btn-outline-dark">Cần tư vấn?</a>
+                    <a href="#chat-box" class="btn btn-outline-dark">Chat trực tuyến</a>
                 </div>
 
                 <p id="detailCartMessage" class="detail-message" role="status" aria-live="polite"></p>

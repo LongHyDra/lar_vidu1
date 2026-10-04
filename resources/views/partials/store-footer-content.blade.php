@@ -5,7 +5,7 @@
             <nav class="footer-links" aria-label="Liên kết cuối trang">
                 <a href="{{ route('welcome') }}">Cửa hàng</a>
                 <a href="{{ route('faq') }}">Hướng dẫn mua hàng</a>
-                <a href="{{ route('user.tickets.index') }}">Hỗ trợ</a>
+                <a href="#chat-box">Chat trực tuyến</a>
             </nav>
         </div>
         <div class="footer-bottom">&copy; {{ date('Y') }} Phụ Kiện Xe Máy 247 · Đồng hành cùng mọi hành trình.</div>
