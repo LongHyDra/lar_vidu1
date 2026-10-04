@@ -35,7 +35,7 @@
                     <label for="variantSelect" class="form-label fw-bold">Phiên bản</label>
                     <select id="variantSelect" class="form-select" aria-label="Chọn phiên bản sản phẩm">
                         @foreach($product->variants as $variant)
-                            <option value="{{ $variant->id }}" data-name="{{ $variant->variant_name }}" data-price="{{ $variant->price }}" data-stock="{{ $variant->stock }}" @disabled($variant->stock <= 0)>
+                                <option value="{{ $variant->id }}" data-name="{{ $variant->variant_name }}" data-price="{{ $variant->price }}" data-stock="{{ $variant->stock }}" data-image="{{ $variant->image ? asset($variant->image) : asset($product->image) }}" @disabled($variant->stock <= 0)>
                                 {{ $variant->variant_name }} — {{ number_format($variant->price, 0, ',', '.') }}đ (còn {{ $variant->stock }})
                             </option>
                         @endforeach

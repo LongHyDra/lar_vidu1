@@ -4,9 +4,11 @@
     const counter = document.getElementById('detailCartCount');
     const variantSelect = document.getElementById('variantSelect');
     const priceDisplay = document.querySelector('.detail-price');
+    const productImage = document.querySelector('.detail-image img');
     const syncVariantUi = () => {
         const option = variantSelect?.selectedOptions?.[0];
         if (!option) return;
+        if (productImage && option.dataset.image) productImage.src = option.dataset.image;
         if (priceDisplay) priceDisplay.textContent = new Intl.NumberFormat('vi-VN').format(Number(option.dataset.price || 0)) + '₫';
         if (button) button.disabled = Number(option.dataset.stock || 0) <= 0;
     };
