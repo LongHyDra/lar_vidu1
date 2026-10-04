@@ -23,7 +23,7 @@
                     <thead><tr><th class="text-center" style="width:48px">Chọn</th><th>#</th><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Số đơn</th><th>Ngày tham gia</th></tr></thead>
                     <tbody>
                     @forelse($users as $user)
-                        <tr><td class="text-center"><input class="form-check-input user-checkbox" type="checkbox" name="user_ids[]" value="{{ $user->id }}" aria-label="Chọn {{ $user->name }}" @disabled($user->id === auth()->id())></td><td>{{ $user->id }}</td><td class="fw-semibold">{{ $user->name }} @if($user->id === auth()->id())<small class="text-muted">(Bạn)</small>@endif</td><td>{{ $user->email }}</td><td><span class="badge text-bg-{{ $user->role === 'admin' ? 'dark' : 'primary' }}">{{ $user->role }}</span></td><td>{{ $user->orders_count }}</td><td>{{ $user->created_at->format('d/m/Y') }}</td></tr>
+                        <tr><td class="text-center"><input class="form-check-input user-checkbox" type="checkbox" name="user_ids[]" value="{{ $user->id }}" aria-label="Chọn {{ $user->name }}" @disabled($user->id === auth()->id())></td><td>{{ $users->firstItem() + $loop->index }}</td><td class="fw-semibold">{{ $user->name }} @if($user->id === auth()->id())<small class="text-muted">(Bạn)</small>@endif</td><td>{{ $user->email }}</td><td><span class="badge text-bg-{{ $user->role === 'admin' ? 'dark' : 'primary' }}">{{ $user->role }}</span></td><td>{{ $user->orders_count }}</td><td>{{ $user->created_at->format('d/m/Y') }}</td></tr>
                     @empty
                         <tr><td colspan="7" class="text-center py-5 text-muted">Chưa có người dùng.</td></tr>
                     @endforelse

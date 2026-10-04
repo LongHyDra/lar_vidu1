@@ -642,7 +642,7 @@
                         @forelse($users as $user)
                         <tr>
                             <td class="text-center"><input class="form-check-input dashboard-user-checkbox" type="checkbox" name="user_ids[]" value="{{ $user->id }}" form="dashboard-bulk-delete-form" aria-label="Chọn {{ $user->name }}" @disabled($user->id === auth()->id())></td>
-                            <td>#{{ $user->id }}</td>
+                            <td>#{{ $loop->iteration }}</td>
                             <td class="fw-bold">{{ $user->name }}</td>
                             <td>{{ $user->email }}</td>
                             <td>
