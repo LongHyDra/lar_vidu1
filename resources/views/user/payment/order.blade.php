@@ -1,89 +1,13 @@
-<!DOCTYPE html>
-<html lang="vi">
+@extends('layouts.storefront')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đơn Hàng Của Tôi | PHỤ KIỆN XE MÁY 247</title>
+@section('title', 'Đơn Hàng Của Tôi')
 
-    <!-- Google Font Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome 6 Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-    <style>
-        * { box-sizing: border-box; }
-        body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #1e293b; min-height: 100vh; margin: 0; }
-        
-        /* HEADER ĐỒNG BỘ */
-        .site-header {
-            background: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 16px 0;
-            margin-bottom: 32px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-        }
-        .brand-link {
-            font-size: 1.15rem;
-            font-weight: 800;
-            color: #0f172a;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 9px;
-        }
-        .brand-badge {
-            background: #f59e0b;
-            color: #000;
-            font-size: 0.68rem;
-            font-weight: 900;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        /* CARD CONTAINER */
-        .order-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
-            padding: 28px;
-        }
-        .table > :not(caption) > * > * {
-            padding: 14px 16px;
-        }
-        .badge-status {
-            font-size: 0.76rem;
-            font-weight: 600;
-            padding: 5px 10px;
-            border-radius: 999px;
-        }
-    </style>
-</head>
-
-<body>
-    <!-- 1. THANH ĐIỀU HƯỚNG HEADER -->
-    <header class="site-header">
-        <div class="container d-flex justify-content-between align-items-center">
-            <a href="{{ route('welcome') }}" class="brand-link">
-                <i class="fa-solid fa-motorcycle text-primary fs-5"></i>
-                <span>PHỤ KIỆN XE MÁY <span class="brand-badge">247</span></span>
-            </a>
-            <div class="d-flex align-items-center gap-2">
-                <a href="{{ route('welcome') }}" class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 shadow-sm">
-                    <i class="fa-solid fa-house me-1"></i> Trang chủ
-                </a>
-                <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary btn-sm fw-semibold px-3 py-2 rounded-3 bg-white">
-                    <i class="fa-solid fa-cart-shopping me-1"></i> Giỏ hàng
-                </a>
-            </div>
-        </div>
-    </header>
+@section('account_content')
+<!-- 1. THANH ĐIỀU HƯỚNG HEADER -->
+    
 
     <!-- 2. NỘI DUNG DANH SÁCH ĐƠN HÀNG -->
-    <div class="container pb-5">
+    <div class="account-page">
         <div class="order-card">
             <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom gap-3">
                 <div>
@@ -203,7 +127,4 @@
     </div>
 
     <!-- Bootstrap 5 Bundle JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-
-</html>
+@endsection

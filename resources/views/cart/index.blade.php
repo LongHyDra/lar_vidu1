@@ -404,6 +404,7 @@
 
         function saveCart(cart) {
             localStorage.setItem(CART_KEY, JSON.stringify(cart));
+            window.dispatchEvent(new CustomEvent('cart:changed', { detail: { items: cart } }));
             renderCart();
         }
 
@@ -531,6 +532,7 @@
             }).then((res) => {
                 if (res.isConfirmed) {
                     localStorage.removeItem(CART_KEY);
+                    window.dispatchEvent(new CustomEvent('cart:changed', { detail: { items: [] } }));
                     renderCart();
                 }
             });
@@ -554,5 +556,8 @@
 
         document.addEventListener('DOMContentLoaded', renderCart);
     </script>
+    @auth
+        @include('partials.cart-sync')
+    @endauth
 </body>
 </html>

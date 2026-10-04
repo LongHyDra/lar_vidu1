@@ -1,23 +1,9 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hồ sơ người dùng</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8fafc; font-family: Arial, sans-serif; }
-        .container { max-width: 900px; margin: 40px auto; }
-        .card { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
-        .header { margin-bottom: 24px; }
-        .alert { margin-bottom: 20px; }
-        .form-label { font-weight: 600; }
-        .btn-primary { background: #2563eb; border-color: #2563eb; }
-        .btn-link { text-decoration: none; }
-    </style>
-</head>
-<body>
-<div class="container">
+@extends('layouts.storefront')
+
+@section('title', 'Hồ sơ người dùng')
+
+@section('account_content')
+<div class="account-page">
     <div class="card">
         <div class="header">
             <h2>Hồ sơ cá nhân</h2>
@@ -59,5 +45,4 @@
         </form>
     </div>
 </div>
-</body>
-</html>
+@endsection

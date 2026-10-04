@@ -8,7 +8,6 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
@@ -62,19 +61,14 @@ class ProductController extends Controller
             'price'       => 'required|numeric|min:0',
             'stock'       => 'required|integer|min:0',
             'description' => 'nullable|string',
-            'image_file'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'image'       => 'nullable|string',
+            'image'       => 'nullable|url|max:2048',
         ]);
 
         $data = $request->only(['category_id', 'name', 'brand', 'attributes', 'price', 'stock', 'description']);
 
-        // 1. Ưu tiên lưu file ảnh tải lên từ máy tính vào storage/app/public/products
-        if ($request->hasFile('image_file')) {
-            $path = $request->file('image_file')->store('products', 'public');
-            $data['image'] = '/storage/' . $path;
-        } elseif ($request->filled('image')) {
-            // 2. Dự phòng nếu người dùng nhập đường link URL ảnh trực tiếp
-            $data['image'] = $request->input('image');
+        // Lưu trực tiếp URL ảnh do quản trị viên cung cấp.
+        if ($request->filled('image')) {
+            $data['image'] = trim($request->input('image'));
         }
 
         $product = Product::create($data);
@@ -107,22 +101,14 @@ class ProductController extends Controller
             'price'       => 'required|numeric|min:0',
             'stock'       => 'required|integer|min:0',
             'description' => 'nullable|string',
-            'image_file'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'image'       => 'nullable|string',
+            'image'       => 'nullable|url|max:2048',
         ]);
 
         $data = $request->only(['category_id', 'name', 'brand', 'attributes', 'price', 'stock', 'description']);
 
-        // Xử lý thay thế file ảnh và dọn dẹp file cũ trên ổ cứng
-        if ($request->hasFile('image_file')) {
-            if ($product->image && str_starts_with($product->image, '/storage/')) {
-                $oldPath = str_replace('/storage/', '', $product->image);
-                Storage::disk('public')->delete($oldPath);
-            }
-            $path = $request->file('image_file')->store('products', 'public');
-            $data['image'] = '/storage/' . $path;
-        } elseif ($request->filled('image')) {
-            $data['image'] = $request->input('image');
+        // Cập nhật URL ảnh; dữ liệu ảnh cũ vẫn được giữ nguyên nếu URL hợp lệ.
+        if ($request->filled('image')) {
+            $data['image'] = trim($request->input('image'));
         }
 
         $oldStock = (int) $product->stock;
@@ -146,12 +132,6 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
-        // Tự động xóa file ảnh khỏi storage khi xóa sản phẩm để tránh rác ổ cứng
-        if ($product->image && str_starts_with($product->image, '/storage/')) {
-            $oldPath = str_replace('/storage/', '', $product->image);
-            Storage::disk('public')->delete($oldPath);
-        }
-
         $product->delete();
         return redirect()->route('products.index')->with('success', 'Xóa sản phẩm thành công!');
     }

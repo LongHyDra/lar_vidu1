@@ -30,6 +30,7 @@ use App\Models\Wishlist;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
@@ -165,7 +166,23 @@ Route::middleware('auth')->group(function () {
     })->middleware('signed')->name('verification.verify');
 
     Route::post('/email/verification-notification', function (Request $request) {
-        $request->user()->sendEmailVerificationNotification();
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
+            return back()->with('success', 'Email của bạn đã được xác thực.');
+        }
+
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (Throwable $e) {
+            Log::error('Verification email resend failed.', [
+                'user_id' => $user->id,
+                'exception' => $e,
+            ]);
+
+            return back()->with('warning', 'Không thể gửi email xác thực lúc này. Vui lòng thử lại sau.');
+        }
+
         return back()->with('success', 'Đường dẫn xác thực mới đã được gửi vào hòm thư email của bạn!');
     })->middleware('throttle:6,1')->name('verification.send');
 

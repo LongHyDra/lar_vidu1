@@ -1,13 +1,9 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yêu cầu hỗ trợ</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-<div class="container py-5" style="max-width:1000px">
+@extends('layouts.storefront')
+
+@section('title', 'Yêu cầu hỗ trợ')
+
+@section('account_content')
+<div class="account-page">
     <div class="bg-white rounded-4 shadow-sm p-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div><h1 class="h3 mb-1">Yêu cầu hỗ trợ</h1><p class="text-muted mb-0">Theo dõi các câu hỏi đã gửi cho cửa hàng.</p></div>
@@ -27,5 +23,4 @@
         <a href="{{ route('welcome') }}" class="btn btn-link px-0">Về trang chủ</a>
     </div>
 </div>
-</body>
-</html>
+@endsection

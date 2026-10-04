@@ -17,9 +17,9 @@ class MomoService
     {
         $endpoint = config('services.momo.endpoint', env('MOMO_ENDPOINT', 'https://test-payment.momo.vn/v2/gateway/api/create'));
         
-        $partnerCode = config('services.momo.partner_code', env('MOMO_PARTNER_CODE', 'MOMO'));
-        $accessKey = config('services.momo.access_key', env('MOMO_ACCESS_KEY', 'F8BBA842ECF85'));
-        $secretKey = config('services.momo.secret_key', env('MOMO_SECRET_KEY', 'K951B6PE1wa8ngf4S01072xExx'));
+        $partnerCode = (string) config('services.momo.partner_code', '');
+        $accessKey = (string) config('services.momo.access_key', '');
+        $secretKey = (string) config('services.momo.secret_key', '');
 
         $orderInfo = 'Thanh toan don hang #' . $order->id;
         $amount = (string) ((int) $order->total_price);
@@ -126,8 +126,8 @@ class MomoService
             return false;
         }
 
-        $accessKey = config('services.momo.access_key', env('MOMO_ACCESS_KEY', 'F8BBA842ECF85'));
-        $secretKey = config('services.momo.secret_key', env('MOMO_SECRET_KEY', 'K951B6PE1wa8ngf4S01072xExx'));
+        $accessKey = (string) config('services.momo.access_key', '');
+        $secretKey = (string) config('services.momo.secret_key', '');
 
         $rawHash = 'accessKey=' . $accessKey .
             '&amount=' . ($payload['amount'] ?? '') .

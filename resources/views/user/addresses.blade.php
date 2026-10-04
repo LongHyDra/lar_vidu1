@@ -1,9 +1,9 @@
-@extends('layouts.auth')
+@extends('layouts.storefront')
 
 @section('title', 'Địa chỉ giao hàng')
 
-@section('content')
-<div class="container py-5" style="max-width: 980px">
+@section('account_content')
+<div class="account-page">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div><span class="eyebrow">Tài khoản</span><h1 class="h3 fw-bold mb-0">Địa chỉ giao hàng</h1></div>
         <a href="{{ route('user.profile') }}" class="btn btn-outline-secondary">Hồ sơ</a>

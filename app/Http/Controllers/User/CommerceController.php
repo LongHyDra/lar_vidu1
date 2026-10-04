@@ -39,7 +39,16 @@ class CommerceController extends Controller
                     'quantity' => min(100000, max(1, (int) ($item['quantity'] ?? 1))),
                     'checked' => ($item['checked'] ?? true) !== false,
                 ];
-            })->filter(fn ($item) => $item['id'] > 0)->values()->all();
+            })->filter(fn ($item) => $item['id'] > 0)
+                ->groupBy(fn ($item) => $item['id'].':'.($item['variant_id'] ?? 0))
+                ->map(function ($group) {
+                    $item = $group->first();
+                    $item['quantity'] = min(100000, $group->sum('quantity'));
+
+                    return $item;
+                })
+                ->values()
+                ->all();
             $cart->update(['items' => $normalized]);
         }
 

@@ -913,6 +913,7 @@
 
         function saveCart(cart) {
             localStorage.setItem(CART_KEY, JSON.stringify(cart));
+            window.dispatchEvent(new CustomEvent('cart:changed', { detail: { items: cart } }));
             updateHeaderCart();
         }
 

@@ -1,23 +1,9 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sản phẩm yêu thích | Phụ Kiện Xe Máy 247</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        body { background: #f8fafc; color: #0f172a; }
-        .page { max-width: 1120px; margin: 40px auto; padding: 0 18px; }
-        .panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; }
-        .product { height: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; }
-        .product-icon { height: 130px; display: grid; place-items: center; background: #eff6ff; border-radius: 10px; color: #2563eb; font-size: 3rem; margin-bottom: 14px; }
-        .product h3 { font-size: 1rem; min-height: 48px; }
-        .empty { color: #64748b; padding: 48px 0; text-align: center; }
-    </style>
-</head>
-<body>
-<div class="page">
+@extends('layouts.storefront')
+
+@section('title', 'Sản phẩm yêu thích')
+
+@section('account_content')
+<div class="account-page">
     <div class="panel">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
             <div>
@@ -62,5 +48,4 @@
         @endif
     </div>
 </div>
-</body>
-</html>
+@endsection

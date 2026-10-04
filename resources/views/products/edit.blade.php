@@ -46,7 +46,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('products.update', $product) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('products.update', $product) }}" method="POST">
                 @csrf
                 @method('PUT')
                 <div class="row g-4">
@@ -79,8 +79,11 @@
                             <input type="number" name="stock" class="form-control" value="{{ old('stock', $product->stock) }}" required min="0">
                         </div>
                         <div class="mb-3">
-                            <label class="field-label"><i class="fa-solid fa-upload text-primary me-1"></i> Tải ảnh thay thế</label>
-                            <input type="file" name="image_file" class="form-control" accept="image/*" onchange="previewUpload(event)">
+                            <label class="field-label"><i class="fa-solid fa-link text-primary me-1"></i> Link ảnh sản phẩm</label>
+                            <input type="url" name="image" class="form-control" value="{{ old('image', filter_var($product->image, FILTER_VALIDATE_URL) ? $product->image : '') }}" placeholder="https://example.com/anh-san-pham.jpg" maxlength="2048">
+                            @if($product->image && !filter_var($product->image, FILTER_VALIDATE_URL))
+                                <small class="text-muted">Ảnh cũ đang dùng đường dẫn local. Nhập URL mới nếu muốn thay ảnh.</small>
+                            @endif
                             <div class="mt-2" id="previewBox">
                                 @if($product->image)
                                     <img id="imgDisplay" src="{{ asset($product->image) }}" alt="{{ $product->name }}" style="max-height: 100px; border-radius: 8px; border: 1px solid #cbd5e1;">
@@ -111,14 +114,12 @@
 </div>
 
 <script>
-    function previewUpload(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const img = document.getElementById('imgDisplay');
-            img.src = URL.createObjectURL(file);
-            img.classList.remove('d-none');
-        }
-    }
+    const imageInput = document.querySelector('input[name="image"]');
+    imageInput?.addEventListener('input', function () {
+        const img = document.getElementById('imgDisplay');
+        img.src = this.value.trim();
+        img.classList.toggle('d-none', !this.value.trim());
+    });
 </script>
 </body>
 </html>

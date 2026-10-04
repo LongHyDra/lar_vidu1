@@ -21,7 +21,7 @@ RUN mkdir -p bootstrap/cache storage/framework/cache/data \
 FROM php-base AS production
 ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr LOG_LEVEL=info \
     DB_CONNECTION=mysql SESSION_DRIVER=database SESSION_SECURE_COOKIE=true \
-    CACHE_STORE=database QUEUE_CONNECTION=sync PORT=10000 RUN_MIGRATIONS=true
+    CACHE_STORE=database QUEUE_CONNECTION=sync PORT=10000 RUN_MIGRATIONS=true RUN_SEEDERS=false
 COPY --from=build --chown=www-data:www-data /var/www /var/www
 COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
 COPY docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini

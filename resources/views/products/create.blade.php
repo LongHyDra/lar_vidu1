@@ -49,7 +49,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('products.store') }}" method="POST">
                 @csrf
                 <div class="row g-4">
                     <div class="col-md-6">
@@ -82,8 +82,8 @@
                             <input type="number" name="stock" class="form-control" value="{{ old('stock', 0) }}" required min="0">
                         </div>
                         <div class="mb-3">
-                            <label class="field-label"><i class="fa-solid fa-upload text-primary me-1"></i> Tải ảnh từ máy tính (Khuyên dùng)</label>
-                            <input type="file" name="image_file" class="form-control" accept="image/*" onchange="previewUpload(event)">
+                            <label class="field-label"><i class="fa-solid fa-link text-primary me-1"></i> Link ảnh sản phẩm</label>
+                            <input type="url" name="image" class="form-control" value="{{ old('image') }}" placeholder="https://example.com/anh-san-pham.jpg" maxlength="2048">
                             <div class="mt-2 d-none" id="previewBox">
                                 <img id="imgDisplay" src="" alt="Preview" style="max-height: 100px; border-radius: 8px; border: 1px solid #cbd5e1;">
                             </div>
@@ -110,13 +110,14 @@
 </div>
 
 <script>
-    function previewUpload(e) {
-        const file = e.target.files[0];
-        if (file) {
-            document.getElementById('imgDisplay').src = URL.createObjectURL(file);
-            document.getElementById('previewBox').classList.remove('d-none');
-        }
-    }
+    const imageInput = document.querySelector('input[name="image"]');
+    imageInput?.addEventListener('input', function () {
+        const preview = document.getElementById('imgDisplay');
+        const previewBox = document.getElementById('previewBox');
+        preview.src = this.value.trim();
+        previewBox.classList.toggle('d-none', !this.value.trim());
+        preview.onerror = () => previewBox.classList.add('d-none');
+    });
 </script>
 </body>
 </html>

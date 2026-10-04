@@ -18,6 +18,12 @@
             </div>
         @endif
 
+        @if (session('warning'))
+            <div class="alert alert-warning border-0 small text-start mb-4" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ session('warning') }}
+            </div>
+        @endif
+
         <div class="d-flex flex-column gap-2">
             <form method="POST" action="{{ route('verification.send') }}">
                 @csrf

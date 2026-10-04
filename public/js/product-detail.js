@@ -43,6 +43,7 @@
                     price, category: button.dataset.category, stock, quantity: 1, checked: true });
             }
             localStorage.setItem(key, JSON.stringify(cart));
+            window.dispatchEvent(new CustomEvent('cart:changed', { detail: { items: cart } }));
             updateCount();
             message.textContent = 'Đã thêm vào giỏ hàng. Bạn có thể tiếp tục lựa chọn hoặc mở giỏ để thanh toán.';
         } catch {

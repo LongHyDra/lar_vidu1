@@ -150,12 +150,45 @@
             display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
         }
         .chat-floating-btn span { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; display: inline-block; }
+        .finance-mobile-bar { display: none; }
+        @media (max-width: 991px) {
+            body { display: block; }
+            .finance-mobile-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+            .finance-mobile-bar button { border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; padding: 8px 12px; font-size: .8rem; font-weight: 600; }
+            .finance-sidebar { display: none; position: relative; width: 100%; height: auto; min-height: 0; }
+            .finance-sidebar.finance-nav-open { display: flex; }
+            .finance-sidebar .sidebar-profile { padding: 16px; }
+            .finance-sidebar .sidebar-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 10px 12px; }
+            .finance-sidebar .menu-item { padding: 11px 12px; }
+            .finance-sidebar .sidebar-footer { padding: 12px; }
+            .finance-main { margin-left: 0; padding: 16px 14px 80px; }
+            .finance-topbar { align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+            .finance-filter-grid, .finance-filter-grid.second { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .finance-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .finance-card { overflow-x: auto; }
+            .finance-table { min-width: 720px; }
+        }
+        @media (max-width: 575px) {
+            .finance-sidebar .sidebar-menu { grid-template-columns: 1fr; }
+            .finance-filter-grid, .finance-filter-grid.second { grid-template-columns: 1fr; }
+            .finance-actions { flex-wrap: wrap; }
+            .finance-actions .finance-button { flex: 1 1 140px; }
+            .finance-tabs-card { overflow-x: auto; white-space: nowrap; }
+            .finance-tab-btn { flex: 0 0 auto; }
+            .chat-floating-btn { right: 12px; bottom: 12px; }
+        }
     </style>
 </head>
 
 <body>
+    <div class="finance-mobile-bar">
+        <strong><i class="fa-solid fa-shapes me-2"></i>SHOP ADMIN</strong>
+        <button type="button" id="financeMenuToggle" aria-controls="financeNavigation" aria-expanded="false">
+            <i class="fa-solid fa-bars me-1"></i>Menu
+        </button>
+    </div>
     <!-- 1. SIDEBAR -->
-    <aside class="finance-sidebar">
+    <aside class="finance-sidebar" id="financeNavigation">
         <div class="sidebar-header">
             <span><i class="fa-solid fa-shapes me-2"></i>SHOP ADMIN</span>
             <i class="fa-solid fa-bars text-secondary" style="font-size:0.85rem;"></i>
@@ -234,6 +267,23 @@
     <a href="{{ route('admin.dashboard') }}" class="chat-floating-btn">
         <span></span> Chat Khách hàng
     </a>
+    <script>
+        (() => {
+            const toggle = document.getElementById('financeMenuToggle');
+            const navigation = document.getElementById('financeNavigation');
+            if (!toggle || !navigation) return;
+
+            toggle.addEventListener('click', () => {
+                const open = navigation.classList.toggle('finance-nav-open');
+                toggle.setAttribute('aria-expanded', String(open));
+            });
+
+            navigation.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+                navigation.classList.remove('finance-nav-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }));
+        })();
+    </script>
 </body>
 
 </html>

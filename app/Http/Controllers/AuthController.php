@@ -3,15 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Exception;
 use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -31,22 +31,42 @@ class AuthController extends Controller
         try {
             Log::info('Registering user with email: ' . $request->email);
 
-            $user = User::create([
-                'name'     => $request->name,
-                'email'    => $request->email,
-                'password' => Hash::make($request->password),
-                'role'     => 'customer',
+            $user = DB::transaction(function () use ($request) {
+                return User::create([
+                    'name'     => $request->name,
+                    'email'    => $request->email,
+                    'password' => Hash::make($request->password),
+                    'role'     => 'customer',
+                ]);
+            });
+
+        } catch (Throwable $e) {
+            Log::error('Registration failed while creating user.', ['exception' => $e]);
+            return redirect()->back()
+                ->withInput($request->except(['password', 'password_confirmation']))
+                ->with('error', 'Đăng ký thất bại. Vui lòng thử lại.');
+        }
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        try {
+            $user->sendEmailVerificationNotification();
+
+            return redirect()->route('verification.notice')->with(
+                'success',
+                'Tài khoản đã được tạo. Link xác thực đã được gửi đến email của bạn.'
+            );
+        } catch (Throwable $e) {
+            Log::error('Verification email failed after successful registration.', [
+                'user_id' => $user->id,
+                'exception' => $e,
             ]);
 
-            event(new Registered($user));
-            Auth::login($user);
-
-            Log::info('User registered successfully, verification email dispatched');
-
-            return redirect()->route('verification.notice');
-        } catch (Exception $e) {
-            Log::error('Registration failed: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Đăng ký thất bại. Vui lòng thử lại.');
+            return redirect()->route('verification.notice')->with(
+                'warning',
+                'Tài khoản đã được tạo nhưng chưa gửi được email xác thực. Vui lòng bấm Gửi lại link.'
+            );
         }
     }
 

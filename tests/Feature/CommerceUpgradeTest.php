@@ -65,6 +65,30 @@ class CommerceUpgradeTest extends TestCase
         $this->assertDatabaseHas('user_addresses', ['user_id' => $user->id, 'is_default' => 1]);
     }
 
+    public function test_cart_sync_collapses_same_product_variant_and_is_idempotent(): void
+    {
+        $user = User::factory()->create();
+        $payload = [
+            ['id' => 4, 'variant_id' => 9, 'quantity' => 1],
+            ['id' => 4, 'variant_id' => 9, 'quantity' => 2],
+            ['id' => 4, 'variant_id' => 10, 'quantity' => 1],
+        ];
+
+        $this->actingAs($user)->putJson(route('user.cart.sync'), ['items' => $payload])
+            ->assertOk()
+            ->assertJsonCount(2, 'items')
+            ->assertJsonPath('items.0.quantity', 3);
+
+        $this->actingAs($user)->putJson(route('user.cart.sync'), ['items' => $payload])
+            ->assertOk()
+            ->assertJsonCount(2, 'items')
+            ->assertJsonPath('items.0.quantity', 3);
+
+        $items = $user->cart->fresh()->items;
+        $this->assertCount(2, $items);
+        $this->assertSame(3, $items[0]['quantity']);
+    }
+
     public function test_sitemap_is_public(): void
     {
         $this->get(route('seo.sitemap'))->assertOk()->assertHeader('Content-Type', 'application/xml')->assertSee('<urlset', false);

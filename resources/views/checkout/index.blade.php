@@ -233,18 +233,40 @@
 
             renderItems(items);
 
-            fetch("{{ route('locations.provinces') }}")
+            const readLocationCache = (key) => {
+                try {
+                    const value = sessionStorage.getItem(key);
+                    return value ? JSON.parse(value) : null;
+                } catch {
+                    return null;
+                }
+            };
+            const writeLocationCache = (key, value) => {
+                try {
+                    sessionStorage.setItem(key, JSON.stringify(value));
+                } catch {
+                    // Storage may be unavailable in private browsing; the API remains the source of truth.
+                }
+            };
+            const setProvinceOptions = (data) => {
+                if (!data?.length || !provinceSelect) return;
+                let options = '<option value="">-- Chọn Tỉnh/Thành --</option>';
+                data.forEach(p => { options += `<option value="${p.ProvinceID}">${p.ProvinceName}</option>`; });
+                provinceSelect.innerHTML = options;
+            };
+            const cachedProvinces = readLocationCache('ghn_provinces');
+            if (cachedProvinces) setProvinceOptions(cachedProvinces);
+            else fetch("{{ route('locations.provinces') }}")
                 .then(res => res.json())
                 .then(res => {
-                    if (res && res.data && res.data.length > 0 && provinceSelect) {
-                        let options = '<option value="">-- Chọn Tỉnh/Thành --</option>';
-                        res.data.forEach(p => {
-                            options += `<option value="${p.ProvinceID}">${p.ProvinceName}</option>`;
-                        });
-                        provinceSelect.innerHTML = options;
+                    if (res?.data?.length) {
+                        writeLocationCache('ghn_provinces', res.data);
+                        setProvinceOptions(res.data);
                     }
                 })
                 .catch(console.error);
+
+            let lastFeeKey = '';
 
             if (provinceSelect) {
                 provinceSelect.addEventListener('change', function() {
@@ -260,16 +282,25 @@
 
                     if (!this.value) return;
 
+                    const cacheKey = `ghn_districts_${this.value}`;
+                    const setDistrictOptions = (data) => {
+                        if (!data?.length || !districtSelect) return;
+                        let options = '<option value="">-- Chọn Quận/Huyện --</option>';
+                        data.forEach(d => { options += `<option value="${d.DistrictID}">${d.DistrictName}</option>`; });
+                        districtSelect.innerHTML = options;
+                        districtSelect.disabled = false;
+                    };
+                    const cachedDistricts = readLocationCache(cacheKey);
+                    if (cachedDistricts) {
+                        setDistrictOptions(cachedDistricts);
+                        return;
+                    }
                     fetch("{{ url('/locations/districts') }}/" + this.value)
                         .then(res => res.json())
                         .then(res => {
-                            if (res && res.data && res.data.length > 0 && districtSelect) {
-                                let options = '<option value="">-- Chọn Quận/Huyện --</option>';
-                                res.data.forEach(d => {
-                                    options += `<option value="${d.DistrictID}">${d.DistrictName}</option>`;
-                                });
-                                districtSelect.innerHTML = options;
-                                districtSelect.disabled = false;
+                            if (res?.data?.length) {
+                                writeLocationCache(cacheKey, res.data);
+                                setDistrictOptions(res.data);
                             }
                         });
                 });
@@ -285,16 +316,25 @@
 
                     if (!this.value) return;
 
+                    const cacheKey = `ghn_wards_${this.value}`;
+                    const setWardOptions = (data) => {
+                        if (!data?.length || !wardSelect) return;
+                        let options = '<option value="">-- Chọn Phường/Xã --</option>';
+                        data.forEach(w => { options += `<option value="${w.WardCode}">${w.WardName}</option>`; });
+                        wardSelect.innerHTML = options;
+                        wardSelect.disabled = false;
+                    };
+                    const cachedWards = readLocationCache(cacheKey);
+                    if (cachedWards) {
+                        setWardOptions(cachedWards);
+                        return;
+                    }
                     fetch("{{ url('/locations/wards') }}/" + this.value)
                         .then(res => res.json())
                         .then(res => {
-                            if (res && res.data && res.data.length > 0 && wardSelect) {
-                                let options = '<option value="">-- Chọn Phường/Xã --</option>';
-                                res.data.forEach(w => {
-                                    options += `<option value="${w.WardCode}">${w.WardName}</option>`;
-                                });
-                                wardSelect.innerHTML = options;
-                                wardSelect.disabled = false;
+                            if (res?.data?.length) {
+                                writeLocationCache(cacheKey, res.data);
+                                setWardOptions(res.data);
                             }
                         });
                 });
@@ -303,6 +343,9 @@
             if (wardSelect) {
                 wardSelect.addEventListener('change', function() {
                     if (!this.value || !districtSelect || !districtSelect.value) return;
+                    const feeKey = `${districtSelect.value}:${this.value}:${JSON.stringify(getCheckoutItems())}`;
+                    if (feeKey === lastFeeKey) return;
+                    lastFeeKey = feeKey;
                     if (shippingFeeText) shippingFeeText.innerText = 'Đang tính cước...';
 
                     fetch("{{ route('locations.fee') }}", {

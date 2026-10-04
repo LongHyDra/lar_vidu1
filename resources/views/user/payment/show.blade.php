@@ -1,32 +1,9 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chi tiết đơn hàng</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 32px; background: #f8fafc; color: #111827; }
-        .container { max-width: 980px; margin: 0 auto; }
-        .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .badge { display: inline-block; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-        .badge-pending { background: #fef3c7; color: #92400e; }
-        .badge-paid { background: #dcfce7; color: #166534; }
-        .badge-cod_ordered { background: #dbeafe; color: #1d4ed8; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #e5e7eb; }
-        th { background: #f3f4f6; }
-        .info { margin-bottom: 18px; line-height: 1.8; }
-        .link { color: #2563eb; text-decoration: none; }
-        .btn { display: inline-block; padding: 10px 16px; border-radius: 8px; background: #111827; color: white; text-decoration: none; }
-        .timeline { border-left: 3px solid #bfdbfe; padding-left: 20px; margin: 20px 0; }
-        .timeline-item { position: relative; margin-bottom: 16px; }
-        .timeline-item::before { content: ''; position: absolute; left: -27px; top: 5px; width: 11px; height: 11px; border-radius: 50%; background: #2563eb; }
-        .muted { color: #64748b; font-size: 13px; }
-    </style>
-</head>
-<body>
-<div class="container">
+@extends('layouts.storefront')
+
+@section('title', 'Chi tiết đơn hàng')
+
+@section('account_content')
+<div class="account-page">
     <div class="card">
         <div class="header">
             <h1>Đơn hàng #{{ $order->id }}</h1>
@@ -56,7 +33,7 @@
             @endforelse
         </div>
 
-        <table>
+        <div class="table-responsive"><table class="table align-middle">
             <thead>
             <tr>
                 <th>Sản phẩm</th>
@@ -75,7 +52,7 @@
                 </tr>
             @endforeach
             </tbody>
-        </table>
+        </table></div>
 
         <div class="info" style="margin-top: 20px;">
             <div><strong>Phí vận chuyển:</strong> {{ number_format($order->ghn_total_fee ?? 0, 0, ',', '.') }}đ</div>
@@ -87,9 +64,9 @@
         @foreach($order->items as $item)
         <form method="POST" action="{{ route('user.products.reviews.store', $item->product) }}" style="border-top:1px solid #e5e7eb;padding:14px 0">
             @csrf <input type="hidden" name="order_id" value="{{ $order->id }}"><strong>{{ $item->product->name }}</strong>
-            <div><select name="rating" required><option value="5">5 sao</option><option value="4">4 sao</option><option value="3">3 sao</option><option value="2">2 sao</option><option value="1">1 sao</option></select></div>
-            <textarea name="body" maxlength="2000" placeholder="Chia sẻ trải nghiệm" style="width:100%;margin-top:8px"></textarea>
-            <button class="btn" style="margin-top:8px">Gửi đánh giá</button>
+            <div><select name="rating" class="form-select" aria-label="Số sao đánh giá" required><option value="5">5 sao</option><option value="4">4 sao</option><option value="3">3 sao</option><option value="2">2 sao</option><option value="1">1 sao</option></select></div>
+            <textarea class="form-control" aria-label="Nội dung đánh giá" name="body" maxlength="2000" placeholder="Chia sẻ trải nghiệm" style="width:100%;margin-top:8px"></textarea>
+            <button class="btn btn-primary mt-2">Gửi đánh giá</button>
         </form>
         @endforeach
         @endif
@@ -97,5 +74,4 @@
         <a href="{{ route('user.orders.index') }}" class="link">← Quay lại lịch sử đơn hàng</a>
     </div>
 </div>
-</body>
-</html>
+@endsection
