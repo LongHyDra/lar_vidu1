@@ -44,6 +44,7 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($items as $item) {
+            $item['image'] = 'https://placehold.co/800x600/png?text='.rawurlencode($item['name']);
             $productId = DB::table('products')->insertGetId(array_merge($item, [
                 'created_at' => now(),
                 'updated_at' => now(),
