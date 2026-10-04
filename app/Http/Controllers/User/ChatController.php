@@ -7,9 +7,15 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class ChatController extends Controller
 {
+    public function index(): View
+    {
+        return view('user.chat.index');
+    }
+
     public function send(Request $request)
     {
         $messageText = trim((string) $request->input('message', ''));

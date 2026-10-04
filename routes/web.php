@@ -223,6 +223,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders/{order}/start-momo', [MomoController::class, 'start'])->name('orders.momo.start');
         Route::get('/orders/{order}/pay/momo', [MomoController::class, 'payAgain'])->name('orders.momo.pay');
 
+        Route::get('/chat', [UserChatController::class, 'index'])->name('chat.index');
         Route::post('/chat/send', [UserChatController::class, 'send'])->name('chat.send');
         Route::get('/chat/messages', [UserChatController::class, 'getMessages'])->name('chat.messages');
     });
