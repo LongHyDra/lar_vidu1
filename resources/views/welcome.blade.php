@@ -490,7 +490,7 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}?v={{ filemtime(public_path('css/storefront.css')) }}">
 </head>
 <body><a class="skip-link" href="#catalog">Đến danh sách sản phẩm</a>
 
