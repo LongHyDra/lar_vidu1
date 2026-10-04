@@ -8,20 +8,20 @@ return new class extends Migration
     public function up(): void
     {
         $images = [
-            'Heo Dầu Brembo 4 Piston Monoblock' => 'https://loremflickr.com/800/600/brembo,brake,caliper?lock=1',
-            'Tay Thắng Brembo Corsa Corta 19RCS' => 'https://loremflickr.com/800/600/brembo,motorcycle,lever?lock=2',
-            'Đĩa Phanh Wave Wave Alpha 110' => 'https://loremflickr.com/800/600/motorcycle,brake,disc?lock=3',
-            'Phuộc Ohlins HO831 cho SH350i' => 'https://loremflickr.com/800/600/ohlins,motorcycle,shock?lock=4',
-            'Phuộc RCB C Series Wave/Dream' => 'https://loremflickr.com/800/600/rcb,motorcycle,shock?lock=5',
-            'Giảm Xóc Sau YSS G-Sport Exciter 150' => 'https://loremflickr.com/800/600/yss,motorcycle,shock?lock=6',
-            'Đèn Trợ Sáng Bi Cầu CX60W' => 'https://loremflickr.com/800/600/motorcycle,auxiliary,light?lock=7',
-            'Đèn LED Matrix Yamaha R15 V4' => 'https://loremflickr.com/800/600/yamaha,r15,headlight?lock=8',
-            'Pô Akrapovic Carbon Full System CB650R' => 'https://loremflickr.com/800/600/akrapovic,motorcycle,exhaust?lock=9',
-            'Pô SC Project CR-T Slip-On Exciter' => 'https://loremflickr.com/800/600/sc-project,motorcycle,exhaust?lock=10',
-            'Lốp Michelin City Grip 2 (120/70-12)' => 'https://loremflickr.com/800/600/michelin,motorcycle,tire?lock=11',
-            'Lốp Pirelli Diablo Rosso IV (120/70-17)' => 'https://loremflickr.com/800/600/pirelli,motorcycle,tire?lock=12',
-            'Bộ Nhông Sên Dĩa DID Vàng 428HD Exciter' => 'https://loremflickr.com/800/600/did,motorcycle,chain?lock=13',
-            'Nhông Sên Dĩa AFAM Racing 520 CBR600RR' => 'https://loremflickr.com/800/600/afam,motorcycle,chain?lock=14',
+            'Heo Dầu Brembo 4 Piston Monoblock' => 'https://tinomotor.vn/storage/pagedata/100113/img/images/product/2484_7%20%282%29.JPG',
+            'Tay Thắng Brembo Corsa Corta 19RCS' => 'https://placehold.co/800x600/111827/ffffff.png?text=Brembo+Corsa+Corta+19RCS',
+            'Đĩa Phanh Wave Wave Alpha 110' => 'https://alobike.vn/uploads/aphanh-w_1.jpg',
+            'Phuộc Ohlins HO831 cho SH350i' => 'https://placehold.co/800x600/f59e0b/111827.png?text=Ohlins+HO831+SH350i',
+            'Phuộc RCB C Series Wave/Dream' => 'https://product.hstatic.net/200000692635/product/323367931_932328081129998_6421310858167130798_n_1f9b980042314f5ea24401bb71ae5467_master.jpg',
+            'Giảm Xóc Sau YSS G-Sport Exciter 150' => 'https://down-vn.img.susercontent.com/file/2f28c09f6dd98977e3fd8f0fd2cac40b',
+            'Đèn Trợ Sáng Bi Cầu CX60W' => 'https://placehold.co/800x600/7c3aed/ffffff.png?text=CX60W+Auxiliary+Light',
+            'Đèn LED Matrix Yamaha R15 V4' => 'https://placehold.co/800x600/0891b2/ffffff.png?text=Yamaha+R15+V4+Matrix+LED',
+            'Pô Akrapovic Carbon Full System CB650R' => 'https://static1.wrs.it/1785417-medium_default/scarico-completo-racing-line-inox-akrapovic-honda-cb-650-r-2026.jpg',
+            'Pô SC Project CR-T Slip-On Exciter' => 'https://placehold.co/800x600/dc2626/ffffff.png?text=SC+Project+CR-T+Exciter',
+            'Lốp Michelin City Grip 2 (120/70-12)' => 'https://asset.lemansnet.com/media/edge/B/2/B/B2B31F76-1F3D-4538-B791-B696944425EF.png',
+            'Lốp Pirelli Diablo Rosso IV (120/70-17)' => 'https://placehold.co/800x600/dc2626/ffffff.png?text=Pirelli+Diablo+Rosso+IV',
+            'Bộ Nhông Sên Dĩa DID Vàng 428HD Exciter' => 'https://placehold.co/800x600/eab308/111827.png?text=DID+428HD+Exciter',
+            'Nhông Sên Dĩa AFAM Racing 520 CBR600RR' => 'https://placehold.co/800x600/7c3aed/ffffff.png?text=AFAM+520+CBR600RR',
         ];
 
         foreach ($images as $name => $image) {
