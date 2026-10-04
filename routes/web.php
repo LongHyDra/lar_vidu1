@@ -285,6 +285,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/products/{product}/variants', [ProductVariantController::class, 'index'])->name('products.variants.index');
         Route::post('/products/{product}/variants', [ProductVariantController::class, 'store'])->name('products.variants.store');
         Route::patch('/variants/{variant}', [ProductVariantController::class, 'update'])->name('products.variants.update');
+        Route::get('/chat', [AdminChatController::class, 'index'])->name('chat.index');
         Route::get('/chat/users', [AdminChatController::class, 'getUsers'])->name('chat.users');
         Route::get('/chat/messages/{userId}', [AdminChatController::class, 'getMessages'])->name('chat.messages');
         Route::post('/chat/send', [AdminChatController::class, 'send'])->name('chat.send');

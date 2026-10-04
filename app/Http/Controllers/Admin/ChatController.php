@@ -7,32 +7,38 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class ChatController extends Controller
 {
+    public function index(): View
+    {
+        return view('admin.chat.index');
+    }
+
     public function getUsers()
     {
         $adminId = Auth::id();
-        $userIds = Message::where('receiver_id', $adminId)
-            ->orWhere('sender_id', $adminId)
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(function (Message $message) use ($adminId) {
-                return $message->sender_id === $adminId ? $message->receiver_id : $message->sender_id;
-            })
-            ->unique()
-            ->values()
-            ->toArray();
+        $conversationMessages = Message::where(function ($query) use ($adminId) {
+            $query->where('sender_id', $adminId);
+        })->orWhere(function ($query) use ($adminId) {
+            $query->where('receiver_id', $adminId);
+        })->get(['sender_id', 'receiver_id', 'is_read']);
+        $conversationUserIds = $conversationMessages
+            ->flatMap(fn (Message $message) => [$message->sender_id, $message->receiver_id])
+            ->reject(fn (int $userId) => $userId === $adminId)
+            ->unique();
+        $unreadCounts = $conversationMessages
+            ->filter(fn (Message $message) => $message->receiver_id === $adminId && ! $message->is_read)
+            ->countBy('sender_id');
 
-        return User::whereIn('id', $userIds)
-            ->where('id', '!=', $adminId)
+        return User::where('id', '!=', $adminId)
             ->select('id', 'name', 'email')
+            ->orderBy('name')
             ->get()
-            ->map(function (User $user) use ($adminId) {
-                $user->unread_count = Message::where('sender_id', $user->id)
-                    ->where('receiver_id', $adminId)
-                    ->where('is_read', false)
-                    ->count();
+            ->map(function (User $user) use ($unreadCounts, $conversationUserIds) {
+                $user->unread_count = $unreadCounts->get($user->id, 0);
+                $user->has_conversation = $conversationUserIds->contains($user->id);
                 return $user;
             });
     }

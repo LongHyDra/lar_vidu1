@@ -1,0 +1,46 @@
+@extends('layouts.admin')
+
+@section('title', 'Chat khách hàng')
+@section('page_title', 'Chat khách hàng')
+
+@push('styles')
+<style>
+.admin-chat-page{display:grid;grid-template-columns:310px minmax(0,1fr);gap:20px;min-height:calc(100vh - 190px)}.admin-chat-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 2px 12px rgba(15,23,42,.05);overflow:hidden}.admin-chat-users{display:flex;flex-direction:column;min-height:620px}.admin-chat-users-head{padding:18px;border-bottom:1px solid #e2e8f0}.admin-chat-users-head h1{font-size:1.1rem;font-weight:800;margin:0 0 4px;color:#0f172a}.admin-chat-users-head p{font-size:.78rem;color:#64748b;margin:0}#admin-chat-user-list{overflow-y:auto;flex:1}.admin-chat-user{display:flex;align-items:center;gap:10px;width:100%;padding:13px 16px;border:0;border-bottom:1px solid #f1f5f9;background:#fff;text-align:left;cursor:pointer}.admin-chat-user:hover,.admin-chat-user.active{background:#eff6ff}.admin-chat-avatar{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:50%;background:#dbeafe;color:#2563eb;font-weight:800}.admin-chat-user-info{min-width:0;flex:1}.admin-chat-user-info strong,.admin-chat-user-info small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.admin-chat-user-info strong{font-size:.84rem;color:#1e293b}.admin-chat-user-info small{font-size:.7rem;color:#64748b;margin-top:3px}.admin-chat-user-meta{text-align:right;flex:0 0 auto}.admin-chat-user-meta .badge{font-size:.63rem}.admin-chat-conversation{display:flex;flex-direction:column;min-height:620px}.admin-chat-conversation-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid #e2e8f0}.admin-chat-conversation-head h2{font-size:1rem;font-weight:800;color:#0f172a;margin:0}.admin-chat-conversation-head p{font-size:.75rem;color:#64748b;margin:4px 0 0}#admin-chat-messages{flex:1;min-height:470px;max-height:calc(100vh - 360px);overflow-y:auto;padding:22px;background:#f8fafc}.admin-chat-empty{text-align:center;color:#64748b;padding:100px 20px;font-size:.88rem}.admin-chat-message{display:flex;flex-direction:column;max-width:75%;margin-bottom:13px}.admin-chat-message.is-mine{align-items:flex-end;margin-left:auto}.admin-chat-message span{padding:10px 13px;border-radius:14px;background:#e2e8f0;color:#1e293b;white-space:pre-wrap;overflow-wrap:anywhere}.admin-chat-message.is-mine span{background:#2563eb;color:#fff}.admin-chat-message small{margin-top:4px;color:#94a3b8;font-size:.65rem}.admin-chat-form{display:flex;gap:10px;padding:14px 18px;border-top:1px solid #e2e8f0;background:#fff}.admin-chat-form .form-control{min-height:44px}.admin-chat-send{width:48px;border:0;border-radius:9px;background:#2563eb;color:#fff}.admin-chat-send:hover{background:#1d4ed8}@media(max-width:900px){.admin-chat-page{grid-template-columns:1fr}.admin-chat-users{min-height:260px;max-height:340px}.admin-chat-conversation{min-height:560px}#admin-chat-messages{max-height:none}}
+</style>
+@endpush
+
+@section('content')
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div><h1 class="h3 mb-1">Chat khách hàng</h1><p class="text-muted mb-0">Chọn bất kỳ tài khoản nào để xem hoặc bắt đầu cuộc trò chuyện.</p></div>
+        <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-primary"><i class="fa-solid fa-chart-line me-1"></i>Dashboard</a>
+    </div>
+    <div class="admin-chat-page">
+        <section class="admin-chat-card admin-chat-users">
+            <div class="admin-chat-users-head"><h1>Danh sách tài khoản</h1><p id="admin-chat-user-count">Đang tải...</p><input id="admin-chat-search" class="form-control mt-3" type="search" placeholder="Tìm theo tên hoặc email..."></div>
+            <div id="admin-chat-user-list"><div class="admin-chat-empty">Đang tải danh sách khách hàng...</div></div>
+        </section>
+        <section class="admin-chat-card admin-chat-conversation">
+            <header class="admin-chat-conversation-head"><div><h2 id="admin-chat-selected-name">Chưa chọn tài khoản</h2><p id="admin-chat-selected-email">Chọn người dùng bên trái để bắt đầu chat.</p></div><span class="badge text-bg-success"><i class="fa-solid fa-circle me-1"></i>Trực tuyến</span></header>
+            <div id="admin-chat-messages"><div class="admin-chat-empty"><i class="fa-solid fa-comments fs-2 d-block mb-3"></i>Chọn một tài khoản để xem tin nhắn.</div></div>
+            <form id="admin-chat-form" class="admin-chat-form"><input id="admin-chat-input" class="form-control" maxlength="2000" autocomplete="off" placeholder="Nhập câu trả lời..." disabled><button class="admin-chat-send" type="submit" disabled aria-label="Gửi tin nhắn"><i class="fa-solid fa-paper-plane"></i></button></form>
+        </section>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+(() => {
+    const list=document.getElementById('admin-chat-user-list'), count=document.getElementById('admin-chat-user-count'), search=document.getElementById('admin-chat-search'), messages=document.getElementById('admin-chat-messages'), selectedName=document.getElementById('admin-chat-selected-name'), selectedEmail=document.getElementById('admin-chat-selected-email'), form=document.getElementById('admin-chat-form'), input=document.getElementById('admin-chat-input'), send=form?.querySelector('button'), csrf=document.querySelector('meta[name=\"csrf-token\"]')?.content||'', adminId=Number(@json(auth()->id()));
+    let users=[],selectedUserId=null;
+    const escapeHtml=value=>String(value??'').replace(/[&<>'\"]/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;',\"'\":'&#039;','\"':'&quot;'}[character]));
+    const renderUsers=()=>{const keyword=search.value.trim().toLowerCase(),filtered=users.filter(user=>(user.name+' '+user.email).toLowerCase().includes(keyword));count.textContent=users.length+' tài khoản · '+filtered.length+' đang hiển thị';if(!filtered.length){list.innerHTML='<div class=\"admin-chat-empty\">Không tìm thấy tài khoản.</div>';return;}list.innerHTML=filtered.map(user=>{const active=Number(user.id)===Number(selectedUserId)?'active':'',initial=escapeHtml((user.name||'?').trim().charAt(0).toUpperCase()),state=user.has_conversation?'':'<small>Chưa có tin nhắn</small>',unread=Number(user.unread_count)>0?'<span class=\"badge bg-danger\">'+user.unread_count+' mới</span>':'';return '<button type=\"button\" class=\"admin-chat-user '+active+'\" data-user-id=\"'+user.id+'\"><span class=\"admin-chat-avatar\">'+initial+'</span><span class=\"admin-chat-user-info\"><strong>'+escapeHtml(user.name)+'</strong><small>'+escapeHtml(user.email)+'</small>'+state+'</span><span class=\"admin-chat-user-meta\">'+unread+'</span></button>';}).join('');list.querySelectorAll('[data-user-id]').forEach(button=>button.addEventListener('click',()=>selectUser(Number(button.dataset.userId))));};
+    const loadUsers=()=>fetch('{{ route('admin.chat.users') }}',{headers:{Accept:'application/json'}}).then(response=>response.ok?response.json():Promise.reject()).then(data=>{users=Array.isArray(data)?data:[];renderUsers();}).catch(()=>{list.innerHTML='<div class=\"admin-chat-empty text-danger\">Không thể tải danh sách tài khoản.</div>';});
+    const loadMessages=()=>{if(!selectedUserId)return;return fetch('/admin/chat/messages/'+selectedUserId,{headers:{Accept:'application/json'}}).then(response=>response.ok?response.json():Promise.reject()).then(data=>{if(!data.length){messages.innerHTML='<div class=\"admin-chat-empty\">Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.</div>';return;}messages.innerHTML=data.map(message=>{const mine=Number(message.sender_id)===adminId;return '<div class=\"admin-chat-message '+(mine?'is-mine':'')+'\"><span>'+escapeHtml(message.content)+'</span><small>'+(mine?'Bạn':escapeHtml(message.sender?.name||'Khách hàng'))+'</small></div>';}).join('');messages.scrollTop=messages.scrollHeight;}).catch(()=>{messages.innerHTML='<div class=\"admin-chat-empty text-danger\">Không thể tải cuộc trò chuyện.</div>';});};
+    const selectUser=userId=>{const user=users.find(item=>Number(item.id)===userId);if(!user)return;selectedUserId=userId;selectedName.textContent=user.name;selectedEmail.textContent=user.email;input.disabled=false;send.disabled=false;renderUsers();loadMessages();};
+    form.addEventListener('submit',event=>{event.preventDefault();const message=input.value.trim();if(!message||!selectedUserId)return;send.disabled=true;fetch('{{ route('admin.chat.send') }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':csrf,Accept:'application/json'},body:JSON.stringify({user_id:selectedUserId,message})}).then(response=>response.ok?response.json():Promise.reject()).then(()=>{input.value='';return Promise.all([loadMessages(),loadUsers()]);}).catch(()=>{messages.insertAdjacentHTML('beforeend','<div class=\"admin-chat-empty text-danger\">Gửi tin nhắn thất bại.</div>');}).finally(()=>{send.disabled=false;input.focus();});});
+    search.addEventListener('input',renderUsers);loadUsers().then(()=>{if(users.length)selectUser(users[0].id);});setInterval(()=>{loadUsers();if(selectedUserId)loadMessages();},3000);
+})();
+</script>
+@endpush
